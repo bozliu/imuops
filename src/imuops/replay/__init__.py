@@ -187,6 +187,6 @@ def _enforce_row_limit(session: SessionBundle, config: dict[str, Any], *, kind: 
     if limit > 0 and row_count > limit:
         raise ValueError(
             f"{kind} row limit exceeded: session has {row_count} rows, limit is {limit}. "
-            "v0.4.0 large-file support is designed for ingest, audit, export, compare, and batch workflows; "
+            "v0.4.1 large-file support is designed for ingest, audit, export, compare, and batch workflows; "
             "replay remains intentionally bounded so it does not overcommit memory on very large sessions."
         )

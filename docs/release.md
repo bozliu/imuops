@@ -1,6 +1,6 @@
 # Public Alpha Release Checklist
 
-`imuops` v0.4.0 is a truthful public alpha for tabular-first IMU QA, reliability scoring, CI-friendly artifacts, and large-file-safe workflows for team use. This checklist is for release hardening and public storytelling sync, not for making deployment-grade claims.
+`imuops` v0.4.1 is a truthful public alpha for tabular-first IMU QA, reliability scoring, CI-friendly artifacts, and large-file-safe workflows for team use. This checklist is for release hardening and public storytelling sync, not for making deployment-grade claims.
 
 ## Already Prepared
 
@@ -61,6 +61,9 @@ Minimum checks:
 9. Verify data hygiene:
    - bundled sample contains no private GPS traces, names, source paths, or location metadata
    - public docs do not describe the bundled sample as raw real-world data
+10. Generate refreshed release visuals:
+   - `python scripts/generate_release_visuals.py --keep-work-dir`
+   - confirm poster PNGs and GIFs are readable without zooming
 
 ## Maintainer Validation (`dl`)
 
@@ -85,7 +88,7 @@ In this workspace, run release validation from the `dl` conda environment:
    - `python -m build`
    - `twine upload dist/*`
 6. Tag and release:
-   - tag `v0.4.0`
+   - tag `v0.4.1`
    - attach HTML/JSON validation artifacts and workflow GIFs
 7. Generate release assets:
    - sample audit summary
@@ -97,6 +100,7 @@ In this workspace, run release validation from the `dl` conda environment:
    - `alpha` / `preview`
    - benchmark adapters are fixture/demo validated
    - no deployment-grade or market-readiness claims
+9. Only switch README install instructions to `pip install imuops` after PyPI returns the new version and a clean-venv smoke install succeeds.
 
 ## What This Release Is
 

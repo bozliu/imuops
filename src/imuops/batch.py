@@ -12,6 +12,7 @@ from plotly.offline.offline import get_plotlyjs
 
 from imuops.audit import run_audit
 from imuops.models import BatchRowModel, BatchSummaryModel, ReasonCountModel
+from imuops.reporting.theme import apply_chart_style, build_shell_css
 from imuops.session import load_session
 from imuops.utils import dump_json, iter_session_dirs, load_json
 
@@ -74,8 +75,11 @@ def load_batch_summary(path: Path) -> BatchSummaryModel:
 def build_batch_report(batch_summary: BatchAuditResult | BatchSummaryModel, out_path: Path) -> Path:
     summary = batch_summary.summary if isinstance(batch_summary, BatchAuditResult) else batch_summary
     rows = summary.rows
+    best_row = rows[-1] if rows else None
+    worst_row = rows[0] if rows else None
+    top_reason = summary.reason_code_rows[0] if summary.reason_code_rows else None
     fig = go.Figure(go.Bar(x=[row.session_id for row in rows], y=[row.trust_score for row in rows], marker_color="#1d4ed8"))
-    fig.update_layout(template="plotly_white", title="Batch trust scores", height=320, margin=dict(l=40, r=20, t=40, b=40))
+    apply_chart_style(fig, title="Batch trust scores", height=320, xaxis_title="session", yaxis_title="trust score")
     table_rows = "".join(
         (
             f"<tr><td>{row.rank}</td><td>{row.session_id}</td><td>{row.dataset}</td><td>{row.task}</td>"
@@ -87,66 +91,102 @@ def build_batch_report(batch_summary: BatchAuditResult | BatchSummaryModel, out_
         f"<tr><td>{reason.code}</td><td>{reason.count}</td></tr>"
         for reason in summary.reason_code_rows[:10]
     )
+    shell_css = build_shell_css(
+        hero_end="#134e4a",
+        accent="#1d4ed8",
+        accent_soft="#dbeafe",
+        warm="#a87112",
+        danger="#b63a3a",
+    )
     html = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>imuops batch report</title>
   <style>
-    :root {{
-      --bg: #f7f7f3;
-      --panel: #ffffff;
-      --ink: #102220;
-      --muted: #51615f;
-      --line: #d7ddd9;
-      --accent: #1d4ed8;
-      --accent-soft: #dbeafe;
-      --warn: #b45309;
+    {shell_css}
+    .overview-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1rem;
     }}
-    body {{ font-family: "Avenir Next", "Segoe UI", sans-serif; margin: 0; background:
-      radial-gradient(circle at top left, #fef3c7 0, transparent 32%),
-      radial-gradient(circle at top right, #dbeafe 0, transparent 28%),
-      var(--bg); color: var(--ink); }}
-    main {{ max-width: 1200px; margin: 0 auto; padding: 2rem; }}
-    .hero {{ background: linear-gradient(135deg, #0f172a, #134e4a); color: white; border-radius: 20px; padding: 1.4rem 1.6rem; margin-bottom: 1rem; }}
-    .hero p {{ color: #dbeafe; }}
-    .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }}
-    .card {{ background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.1rem; margin-bottom: 1rem; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05); }}
-    .pill {{ display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 0.25rem 0.7rem; margin: 0 0.4rem 0.4rem 0; font-size: 0.9rem; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ border-bottom: 1px solid var(--line); padding: 0.7rem 0.55rem; text-align: left; vertical-align: top; }}
-    th {{ color: var(--muted); font-weight: 600; }}
+    .metric-label {{ color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.45rem; }}
+    .metric-value {{ font-size: 1.95rem; font-weight: 800; line-height: 1; margin-bottom: 0.35rem; }}
+    .metric-note {{ color: var(--muted); font-size: 0.95rem; }}
   </style>
   <script type="text/javascript">{get_plotlyjs()}</script>
 </head>
 <body>
   <main>
-    <section class="hero">
-      <h1>imuops batch report</h1>
-      <p>Rank sessions by trust score, expose recurring failures, and hand CI a stable machine-readable summary.</p>
-      <div>
-        <span class="pill">sessions={summary.session_count}</span>
-        <span class="pill">pass={summary.counts.get('pass', 0)}</span>
-        <span class="pill">warning={summary.counts.get('warning', 0)}</span>
-        <span class="pill">fail={summary.counts.get('fail', 0)}</span>
+    <section class="hero" id="batch-poster">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="hero-kicker">Fleet QA view</div>
+          <h1>imuops batch report</h1>
+          <p>Rank sessions by trust score, expose recurring failures, and hand CI a stable machine-readable summary.</p>
+        </div>
+        <div class="panel panel-strong">
+          <div class="metric-label">Top recurring reason</div>
+          <div class="metric-value">{top_reason.code if top_reason else 'None'}</div>
+          <p class="metric-note">{top_reason.count if top_reason else 0} sessions surfaced the most common failure mode.</p>
+        </div>
       </div>
     </section>
-    <div class="grid">
-      <section class="card">{fig.to_html(full_html=False, include_plotlyjs=False)}</section>
-      <section class="card">
-        <h2>Recurring failure reasons</h2>
+
+    <section class="overview-grid section">
+      <div class="panel">
+        <div class="metric-label">Sessions</div>
+        <div class="metric-value">{summary.session_count}</div>
+        <p class="metric-note">Total canonical sessions in this batch.</p>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Pass</div>
+        <div class="metric-value">{summary.counts.get('pass', 0)}</div>
+        <p class="metric-note">Healthy sessions ready for downstream work.</p>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Warning</div>
+        <div class="metric-value">{summary.counts.get('warning', 0)}</div>
+        <p class="metric-note">Sessions that need reviewer attention.</p>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Fail</div>
+        <div class="metric-value">{summary.counts.get('fail', 0)}</div>
+        <p class="metric-note">Sessions that should not become baselines yet.</p>
+      </div>
+    </section>
+
+    <section class="decision-grid capture-poster" id="batch-overview">
+      <section class="panel">
+        {fig.to_html(full_html=False, include_plotlyjs=False)}
+      </section>
+      <section class="panel">
+        <div class="section-label">Recurring failure reasons</div>
+        <div class="table-shell">
         <table>
           <tr><th>Reason code</th><th>Count</th></tr>
           {trend_rows or '<tr><td colspan="2">No recurring failures detected.</td></tr>'}
         </table>
+        </div>
+        <div class="section-label" style="margin-top: 1rem;">Best and worst sessions</div>
+        <div class="table-shell">
+          <table>
+            <tr><th></th><th>Session</th><th>Trust score</th><th>Status</th></tr>
+            <tr><th>Worst</th><td>{worst_row.session_id if worst_row else '-'}</td><td>{f"{worst_row.trust_score:.3f}" if worst_row else '-'}</td><td>{worst_row.status if worst_row else '-'}</td></tr>
+            <tr><th>Best</th><td>{best_row.session_id if best_row else '-'}</td><td>{f"{best_row.trust_score:.3f}" if best_row else '-'}</td><td>{best_row.status if best_row else '-'}</td></tr>
+          </table>
+        </div>
       </section>
-    </div>
-    <section class="card">
-      <h2>Session ranking</h2>
+    </section>
+    <section class="panel section" id="batch-ranking">
+      <div class="section-label">Session ranking</div>
+      <div class="table-shell">
       <table>
         <tr><th>Rank</th><th>Session</th><th>Dataset</th><th>Task</th><th>Status</th><th>Trust score</th><th>Reason codes</th></tr>
         {table_rows}
       </table>
+      </div>
     </section>
   </main>
 </body>

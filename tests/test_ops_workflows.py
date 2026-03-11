@@ -87,6 +87,8 @@ def test_batch_audit_and_report(tmp_path: Path, synthetic_session) -> None:
     report_path = tmp_path / "batch_report.html"
     build_batch_report(batch_result, report_path)
     assert report_path.exists()
+    html = report_path.read_text(encoding="utf-8")
+    assert "Best and worst sessions" in html
 
 
 def test_trustscore_validation_records_non_improving_packet_loss(synthetic_session) -> None:

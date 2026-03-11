@@ -32,7 +32,7 @@ def run_benchmark(session: SessionBundle, task: str, config: dict[str, Any]) -> 
     if limit > 0 and len(session.imu) > limit:
         raise ValueError(
             f"benchmark row limit exceeded: session has {len(session.imu)} rows, limit is {limit}. "
-            "v0.4.0 large-file support is aimed at ingest, audit, export, compare, and batch pipelines; "
+            "v0.4.1 large-file support is aimed at ingest, audit, export, compare, and batch pipelines; "
             "benchmarking is still capped so a single huge session does not exhaust memory."
         )
     if task == "orientation":

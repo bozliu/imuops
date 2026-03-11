@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 - 2026-03-11
 
-- refreshed the public README story around B2B IMU QA, workflow visuals, and team value
-- aligned dataset provenance language across docs, release notes, and security guidance
-- standardized the bundled sample wording as synthetic demo data and kept legacy logs local-only
+- restyled report, compare, and batch HTML so the first screen is higher-contrast, more legible, and decision-focused
+- added a reproducible `scripts/generate_release_visuals.py` pipeline for poster PNGs and short GIF demos
+- replaced inline README GIFs with poster cards linked to demos and full artifacts
+- aligned release notes and docs for a `v0.4.1` patch line while keeping bundled sample language synthetic and legacy logs local-only
 
 ## 0.4.0 - 2026-03-11
 

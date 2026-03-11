@@ -16,10 +16,35 @@ import pyarrow.parquet as pq
 from imuops.audit import AuditResult
 from imuops.benchmark import BenchmarkResult, load_existing_benchmark
 from imuops.config import load_defaults
-from imuops.models import CorruptionSummaryModel, ReplaySummaryModel
+from imuops.models import AuditSummaryModel, CorruptionSummaryModel, ReplaySummaryModel
+from imuops.reporting.theme import apply_chart_style, build_shell_css
 from imuops.replay import ReplayResult
 from imuops.session import SessionBundle
 from imuops.utils import downsample_indices, load_json, redact_path
+
+REASON_LABELS = {
+    "timing_bad": "Timing jitter and irregular cadence",
+    "dropout": "Packet loss or frozen samples",
+    "clipping": "Sensor clipping",
+    "gyro_bias_drift": "Gyro bias drift",
+    "mag_disturbed": "Magnetic disturbance",
+    "gps_unreliable": "GPS support is unreliable",
+    "insufficient_static_segment": "Too little static calibration time",
+    "pressure_unstable": "Pressure signal instability",
+    "orientation_inconsistent": "Orientation consistency drift",
+}
+
+REASON_ACTIONS = {
+    "timing_bad": "Check logger cadence, timestamp source, and buffering before reusing this session for baseline work.",
+    "dropout": "Inspect transport integrity or firmware buffering, then rerun ingest and audit before exporting data downstream.",
+    "clipping": "Increase sensor range or reduce motion extremes before using this session as a training or benchmark reference.",
+    "gyro_bias_drift": "Add a cleaner static calibration segment or review gyro compensation before trusting long-horizon orientation results.",
+    "mag_disturbed": "Treat heading-sensitive outputs cautiously and review the magnetic environment before comparing runs.",
+    "gps_unreliable": "Do not lean on GPS-assisted conclusions until timing and validity improve.",
+    "insufficient_static_segment": "Capture a short stationary segment at the start of the run so calibration checks have enough evidence.",
+    "pressure_unstable": "Review pressure sensor stability before using floor-change or altitude-sensitive analysis.",
+    "orientation_inconsistent": "Verify mounting and frame conventions before comparing this session against a baseline.",
+}
 
 
 def load_existing_replays(session_dir: Path) -> list[ReplayResult]:
@@ -122,8 +147,19 @@ def _build_context(
     return {
         "title": f"imuops report - {session.metadata.session_id}",
         "plotly_js": get_plotlyjs(),
+        "shell_css": build_shell_css(
+            hero_end="#0f766e",
+            accent="#0f766e",
+            accent_soft="#d7f0e6",
+            warm="#a87112",
+            danger="#b63a3a",
+        ),
         "session": session_meta,
         "audit_summary": audit_result.summary.model_dump() if audit_result else None,
+        "decision_snapshot": _decision_snapshot(audit_result.summary) if audit_result else None,
+        "decision_next_step": _recommended_next_step(audit_result.summary) if audit_result else None,
+        "top_reason_rows": _top_reason_rows(audit_result) if audit_result else [],
+        "available_sensor_list": _available_sensor_list(audit_result.summary) if audit_result else [],
         "issue_rows": issue_rows,
         "benchmark_summary": benchmark_result.summary.model_dump() if benchmark_result else None,
         "corruption_summary": corruption_summary.model_dump() if corruption_summary else None,
@@ -150,14 +186,7 @@ def _line_plot(x: pd.Series | np.ndarray, y: np.ndarray, title: str, y_label: st
     indices = downsample_indices(len(y), max_points)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=np.asarray(x)[indices], y=np.asarray(y)[indices], mode="lines", name=title))
-    fig.update_layout(
-        title=title,
-        xaxis_title="t_ms",
-        yaxis_title=y_label,
-        margin=dict(l=40, r=20, t=40, b=40),
-        template="plotly_white",
-        height=280,
-    )
+    apply_chart_style(fig, title=title, height=300, xaxis_title="t_ms", yaxis_title=y_label)
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
@@ -190,14 +219,13 @@ def _window_trust_plot(audit_result: AuditResult) -> str:
     indices = downsample_indices(len(y), max_points)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=np.asarray(x)[indices], y=np.asarray(y)[indices], mode="lines+markers", name="Trust score", line=dict(color="#dc2626")))
-    fig.update_layout(
+    apply_chart_style(
+        fig,
         title="Trust score timeline",
+        height=300,
         xaxis_title="t_ms",
         yaxis_title="score",
         yaxis=dict(range=[0, 1.02]),
-        margin=dict(l=40, r=20, t=40, b=40),
-        template="plotly_white",
-        height=280,
     )
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
@@ -210,14 +238,7 @@ def _gps_plot(session: SessionBundle) -> str | None:
         return None
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=valid["lon"], y=valid["lat"], mode="lines+markers", name="GPS"))
-    fig.update_layout(
-        title="GPS track",
-        xaxis_title="longitude",
-        yaxis_title="latitude",
-        template="plotly_white",
-        height=320,
-        margin=dict(l=40, r=20, t=40, b=40),
-    )
+    apply_chart_style(fig, title="GPS track", height=320, xaxis_title="longitude", yaxis_title="latitude")
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
@@ -232,14 +253,7 @@ def _replay_card(replay: ReplayResult, session: SessionBundle) -> dict[str, Any]
             gt = session.ground_truth.copy()
             gt[["x", "y"]] = gt[["x", "y"]] - gt[["x", "y"]].iloc[0]
             fig.add_trace(go.Scatter(x=gt["x"], y=gt["y"], mode="lines", name="ground_truth"))
-        fig.update_layout(
-            title=f"{replay.baseline} trajectory",
-            xaxis_title="x",
-            yaxis_title="y",
-            template="plotly_white",
-            height=320,
-            margin=dict(l=40, r=20, t=40, b=40),
-        )
+        apply_chart_style(fig, title=f"{replay.baseline} trajectory", height=320, xaxis_title="x", yaxis_title="y")
         path_div = fig.to_html(full_html=False, include_plotlyjs=False)
     return {
         "baseline": replay.baseline,
@@ -275,14 +289,7 @@ def _benchmark_plot(benchmark_result: BenchmarkResult | None) -> str | None:
     xs = [baseline.baseline for baseline in benchmark_result.summary.baselines]
     ys = [baseline.metrics.get(metric_name, np.nan) for baseline in benchmark_result.summary.baselines]
     fig = go.Figure(go.Bar(x=xs, y=ys, marker_color="#2563eb"))
-    fig.update_layout(
-        title=f"Benchmark primary metric: {metric_name}",
-        xaxis_title="baseline",
-        yaxis_title=metric_name,
-        template="plotly_white",
-        height=280,
-        margin=dict(l=40, r=20, t=40, b=40),
-    )
+    apply_chart_style(fig, title=f"Benchmark primary metric: {metric_name}", height=300, xaxis_title="baseline", yaxis_title=metric_name)
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
@@ -299,3 +306,54 @@ def _load_corruption_comparison(corruption_summary: CorruptionSummaryModel) -> d
         "source_trust_score": source_summary.get("trust_score"),
         "source_reason_codes": source_summary.get("reason_codes", []),
     }
+
+
+def _decision_snapshot(summary: AuditSummaryModel) -> dict[str, Any]:
+    return {
+        "trust_percent": round(summary.trust_score * 100.0, 1),
+        "status_label": summary.status.upper(),
+        "status_class": f"status-{summary.status}",
+        "duration_s": round(summary.duration_s, 1),
+        "nominal_hz": round(summary.nominal_hz, 1),
+        "window_count": summary.window_count,
+    }
+
+
+def _recommended_next_step(summary: AuditSummaryModel) -> str:
+    if summary.status == "pass" and not summary.reason_codes:
+        return "This session looks healthy enough for compare, batch ranking, and QA-filtered export into downstream training or robotics workflows."
+    first_reason = summary.reason_codes[0] if summary.reason_codes else None
+    if first_reason and first_reason in REASON_ACTIONS:
+        return REASON_ACTIONS[first_reason]
+    if summary.status == "fail":
+        return "Do not promote this session into a baseline yet. Fix the acquisition problem, re-ingest the file, and rerun the audit."
+    return "Review the top issues below before using this session as a regression baseline or export source."
+
+
+def _top_reason_rows(audit_result: AuditResult) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    issue_lookup = {}
+    for issue in audit_result.issues:
+        issue_lookup.setdefault(issue.code, issue)
+    for code in audit_result.summary.reason_codes[:4]:
+        issue = issue_lookup.get(code)
+        rows.append(
+            {
+                "label": REASON_LABELS.get(code, code.replace("_", " ").title()),
+                "message": issue.message if issue else "Flag raised in the audit summary.",
+                "action": REASON_ACTIONS.get(code, "Inspect the detailed metrics before using this session downstream."),
+            }
+        )
+    if not rows:
+        rows.append(
+            {
+                "label": "No major quality issues detected",
+                "message": "The audit did not surface blocking reason codes for this session.",
+                "action": "Use compare, batch, or export to move this session into the next workflow stage.",
+            }
+        )
+    return rows
+
+
+def _available_sensor_list(summary: AuditSummaryModel) -> list[str]:
+    return [name.replace("_", " ").upper() for name, enabled in summary.available_sensors.items() if enabled]

@@ -14,6 +14,7 @@ from imuops.benchmark import BenchmarkResult, load_existing_benchmark
 from imuops.models import CompareSessionModel, CompareSummaryModel
 from imuops.replay import ReplayResult
 from imuops.reporting import load_existing_replays
+from imuops.reporting.theme import apply_chart_style, build_shell_css
 from imuops.session import SessionBundle
 from imuops.utils import dump_json, redact_path
 
@@ -227,102 +228,153 @@ def _render_compare_html(summary: CompareSummaryModel) -> str:
             marker_color=["#0f766e", "#2563eb", "#dc2626"],
         )
     )
-    trust_fig.update_layout(template="plotly_white", title="Trust score comparison", height=320, margin=dict(l=40, r=20, t=40, b=40))
+    apply_chart_style(trust_fig, title="Trust score comparison", height=320, xaxis_title="session", yaxis_title="score")
     regression_rows = "".join(f"<li>{reason}</li>" for reason in summary.regression_reasons) or "<li>No regression reasons detected.</li>"
     improvement_rows = "".join(f"<li>{reason}</li>" for reason in summary.improvement_reasons) or "<li>No improvement reasons detected.</li>"
+    metadata_rows = "".join(
+        f"<tr><th>{key.replace('_', ' ')}</th><td>{values.get('session_a')}</td><td>{values.get('session_b')}</td></tr>"
+        for key, values in summary.metadata_differences.items()
+    ) or "<tr><td colspan='3'>No metadata differences detected.</td></tr>"
+    shell_css = build_shell_css(
+        hero_end="#1d4ed8",
+        accent="#1d4ed8",
+        accent_soft="#dbeafe",
+        warm="#a87112",
+        danger="#b63a3a",
+    )
+    status_class = f"status-{summary.recommendation_status if summary.recommendation_status in {'improved', 'mixed', 'regressed'} else 'warning'}"
+    if status_class == "status-regressed":
+        status_class = "status-fail"
+    elif status_class == "status-improved":
+        status_class = "status-pass"
+    else:
+        status_class = "status-warning"
     return f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>imuops compare report</title>
   <style>
-    :root {{
-      --bg: #f5f6ef;
-      --panel: #ffffff;
-      --ink: #102220;
-      --muted: #556764;
-      --line: #d4ddd6;
-      --accent: #2563eb;
-      --accent-2: #0f766e;
-      --danger: #b91c1c;
+    {shell_css}
+    .compare-score-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1rem;
     }}
-    body {{ margin: 0; font-family: "Avenir Next", "Segoe UI", sans-serif; background:
-      radial-gradient(circle at top left, #dbeafe 0, transparent 28%),
-      radial-gradient(circle at bottom right, #dcfce7 0, transparent 25%),
-      var(--bg); color: var(--ink); }}
-    main {{ max-width: 1220px; margin: 0 auto; padding: 2rem; }}
-    .hero {{ background: linear-gradient(135deg, #111827, #1d4ed8); color: white; border-radius: 24px; padding: 1.5rem 1.7rem; margin-bottom: 1rem; }}
-    .hero p {{ color: #dbeafe; max-width: 60rem; }}
-    .pill {{ display: inline-block; border-radius: 999px; padding: 0.25rem 0.7rem; margin: 0 0.4rem 0.4rem 0; background: rgba(255,255,255,0.14); }}
-    .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }}
-    .card {{ background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.1rem; margin-bottom: 1rem; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05); }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th, td {{ border-bottom: 1px solid var(--line); padding: 0.65rem 0.55rem; text-align: left; vertical-align: top; }}
-    th {{ color: var(--muted); font-weight: 600; }}
-    ul {{ margin: 0.5rem 0 0 1.25rem; padding: 0; }}
-    pre {{ white-space: pre-wrap; background: #f8fafc; border-radius: 12px; padding: 0.8rem; overflow-x: auto; }}
+    .delta-strip {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }}
+    .metric-value {{ font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 0.35rem; }}
+    .metric-label {{ color: var(--muted); text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.76rem; font-weight: 700; margin-bottom: 0.45rem; }}
+    .metric-note {{ color: var(--muted); font-size: 0.95rem; }}
+    .compare-table th:first-child {{ width: 24%; }}
   </style>
   <script type="text/javascript">{get_plotlyjs()}</script>
 </head>
 <body>
   <main>
-    <section class="hero">
-      <h1>imuops compare report</h1>
-      <p>Use this view to decide whether a new IMU session, preprocessing revision, or firmware drop is healthier than the baseline it replaces.</p>
-      <div>
-        <span class="pill">status={summary.recommendation_status}</span>
-        <span class="pill">trust_delta={summary.trust_score_delta:.3f}</span>
+    <section class="hero" id="compare-poster">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="hero-kicker">Regression review</div>
+          <h1>imuops compare report</h1>
+          <p>Use this view to decide whether a new IMU session, preprocessing revision, or firmware drop is healthier than the baseline it replaces.</p>
+          <p class="muted"><strong>Recommendation:</strong> {summary.recommendation_summary}</p>
+        </div>
+        <div class="panel panel-strong">
+          <div class="metric-label">Verdict</div>
+          <div class="metric-value">{summary.recommendation_status.upper()}</div>
+          <div class="status-pill {status_class}">trust delta {summary.trust_score_delta:+.3f}</div>
+          <p class="metric-note">Session B should only replace session A if the regression reasons are acceptable for the workflow.</p>
+        </div>
       </div>
-      <p><strong>Recommendation:</strong> {summary.recommendation_summary}</p>
     </section>
-    <section class="card">
-      <h2>Session metadata</h2>
-      <table>
-        <tr><th></th><th>Session A</th><th>Session B</th></tr>
-        <tr><th>Session ID</th><td>{summary.session_a.session_id}</td><td>{summary.session_b.session_id}</td></tr>
-        <tr><th>Dataset</th><td>{summary.session_a.dataset}</td><td>{summary.session_b.dataset}</td></tr>
-        <tr><th>Task</th><td>{summary.session_a.task}</td><td>{summary.session_b.task}</td></tr>
-        <tr><th>Source path</th><td>{summary.session_a.source_path}</td><td>{summary.session_b.source_path}</td></tr>
-        <tr><th>Subject ID</th><td>{summary.session_a.subject_id or '-'}</td><td>{summary.session_b.subject_id or '-'}</td></tr>
-      </table>
+
+    <section class="compare-score-grid section">
+      <div class="panel">
+        <div class="metric-label">Session A</div>
+        <div class="metric-value">{summary.trust_score_a:.3f}</div>
+        <p class="metric-note">{summary.session_a.session_id}</p>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Session B</div>
+        <div class="metric-value">{summary.trust_score_b:.3f}</div>
+        <p class="metric-note">{summary.session_b.session_id}</p>
+      </div>
+      <div class="panel">
+        <div class="metric-label">Delta</div>
+        <div class="metric-value">{summary.trust_score_delta:+.3f}</div>
+        <p class="metric-note">Positive means session B improved. Negative means it regressed.</p>
+      </div>
     </section>
-    <section class="card">{trust_fig.to_html(full_html=False, include_plotlyjs=False)}</section>
-    <div class="grid">
-      <section class="card">
-        <h2>Why it regressed</h2>
-        <ul>{regression_rows}</ul>
-      </section>
-      <section class="card">
-        <h2>Why it improved</h2>
-        <ul>{improvement_rows}</ul>
-      </section>
-    </div>
-    <div class="grid">
-      <section class="card">
-        <h2>Reason-code delta</h2>
-        <table>
+
+    <section class="delta-strip capture-poster" id="compare-decision">
+      <div class="panel">
+        <div class="section-label">Why it regressed</div>
+        <ul class="compact-list">{regression_rows}</ul>
+      </div>
+      <div class="panel">
+        <div class="section-label">Why it improved</div>
+        <ul class="compact-list">{improvement_rows}</ul>
+      </div>
+    </section>
+
+    <section class="section panel" id="compare-trust">
+      {trust_fig.to_html(full_html=False, include_plotlyjs=False)}
+    </section>
+
+    <div class="decision-grid section">
+      <section class="panel">
+        <div class="section-label">Reason-code delta</div>
+        <div class="table-shell">
+        <table class="compare-table">
           <tr><th>Added in session B</th><td>{", ".join(summary.reason_codes_added) or "-"}</td></tr>
           <tr><th>Removed in session B</th><td>{", ".join(summary.reason_codes_removed) or "-"}</td></tr>
         </table>
+        </div>
       </section>
-      <section class="card">
-        <h2>Metadata differences</h2>
-        <pre>{summary.metadata_differences}</pre>
-      </section>
-    </div>
-    <div class="grid">
-      <section class="card">
-        <h2>Replay metric deltas</h2>
-        <pre>{summary.replay_metric_deltas}</pre>
-      </section>
-      <section class="card">
-        <h2>Benchmark metric deltas</h2>
-        <pre>{summary.benchmark_metric_deltas}</pre>
+      <section class="panel">
+        <div class="section-label">Metric deltas</div>
+        <p class="muted">Replay and benchmark deltas stay below the fold, but the top-line verdict already incorporates them into the recommendation summary.</p>
+        <div class="table-shell">
+          <table class="compare-table">
+            <tr><th>Replay metrics</th><td><pre>{summary.replay_metric_deltas}</pre></td></tr>
+            <tr><th>Benchmark metrics</th><td><pre>{summary.benchmark_metric_deltas}</pre></td></tr>
+          </table>
+        </div>
       </section>
     </div>
-    <section class="card">
-      <h2>Trust-score contract</h2>
-      <pre>{summary.audit_formula}</pre>
+
+    <section class="section">
+      <details>
+        <summary>Metadata differences and trust-score contract</summary>
+        <div class="details-body">
+          <div class="table-shell">
+            <table>
+              <tr><th></th><th>Session A</th><th>Session B</th></tr>
+              <tr><th>Session ID</th><td>{summary.session_a.session_id}</td><td>{summary.session_b.session_id}</td></tr>
+              <tr><th>Dataset</th><td>{summary.session_a.dataset}</td><td>{summary.session_b.dataset}</td></tr>
+              <tr><th>Task</th><td>{summary.session_a.task}</td><td>{summary.session_b.task}</td></tr>
+              <tr><th>Source path</th><td>{summary.session_a.source_path}</td><td>{summary.session_b.source_path}</td></tr>
+              <tr><th>Subject ID</th><td>{summary.session_a.subject_id or '-'}</td><td>{summary.session_b.subject_id or '-'}</td></tr>
+            </table>
+          </div>
+          <div class="table-shell">
+            <table>
+              <tr><th></th><th>Session A</th><th>Session B</th></tr>
+              {metadata_rows}
+            </table>
+          </div>
+          <div class="panel">
+            <div class="section-label">Trust-score contract</div>
+            <pre>{summary.audit_formula}</pre>
+          </div>
+        </div>
+      </details>
     </section>
   </main>
 </body>

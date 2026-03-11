@@ -24,6 +24,7 @@ def test_report_contains_expected_sections(synthetic_session, tmp_path: Path) ->
     build_report(synthetic_session, audit_result, [replay], out)
     html = out.read_text(encoding="utf-8")
     assert "imuops report" in html
-    assert "Benchmark Summary" in html
-    assert "Reliability Summary" in html
-    assert "Window formula" in html
+    assert "Benchmark summary" in html
+    assert "Decision snapshot" in html
+    assert "Recommended next step" in html
+    assert "Detailed session metadata and trust-score contract" in html

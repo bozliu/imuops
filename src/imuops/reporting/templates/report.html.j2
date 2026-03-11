@@ -4,167 +4,285 @@
   <meta charset="utf-8" />
   <title>{{ title }}</title>
   <style>
-    :root {
-      --bg: #f5f7f1;
-      --panel: #ffffff;
-      --ink: #112120;
-      --muted: #52615f;
-      --line: #d6ddd8;
-      --accent: #0f766e;
-      --accent-soft: #d1fae5;
-      --warn: #b45309;
-      --fail: #b91c1c;
+    {{ shell_css | safe }}
+    .report-poster {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 1rem;
     }
-    body { font-family: "Avenir Next", "Segoe UI", sans-serif; margin: 0; color: var(--ink); background:
-      radial-gradient(circle at top left, #dbeafe 0, transparent 30%),
-      radial-gradient(circle at bottom right, #dcfce7 0, transparent 24%),
-      var(--bg); }
-    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-    h1, h2, h3 { color: #0b1f1d; }
-    p { line-height: 1.6; }
-    table { border-collapse: collapse; width: 100%; background: white; }
-    th, td { border-bottom: 1px solid var(--line); padding: 0.65rem 0.55rem; text-align: left; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.1rem; margin-bottom: 1rem; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; }
-    .hero { background: linear-gradient(135deg, #0f172a, #0f766e); color: white; border-radius: 24px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
-    .hero p { color: #d1fae5; }
-    code { background: #ecfeff; padding: 0.15rem 0.35rem; border-radius: 4px; }
-    .muted { color: var(--muted); }
-    .pill { display: inline-block; border-radius: 999px; padding: 0.2rem 0.65rem; background: rgba(255,255,255,0.14); margin-right: 0.4rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
-    pre { white-space: pre-wrap; background: #f8fafc; border-radius: 12px; padding: 0.8rem; }
+    .summary-card .metric-value {
+      display: flex;
+      align-items: baseline;
+      gap: 0.35rem;
+    }
+    .summary-card .metric-value small {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .sensor-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.8rem;
+    }
+    .sensor-pill {
+      border-radius: 999px;
+      padding: 0.28rem 0.65rem;
+      background: rgba(15, 118, 110, 0.1);
+      color: #0f6c61;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.7rem;
+    }
+    .info-chip {
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(19, 35, 33, 0.08);
+      padding: 0.85rem 0.9rem;
+    }
+    .info-chip strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-top: 0.3rem;
+    }
+    .issue-table code {
+      white-space: nowrap;
+    }
   </style>
   <script type="text/javascript">{{ plotly_js | safe }}</script>
 </head>
 <body>
   <main>
-    <div class="hero">
-      <h1>imuops report</h1>
-      <p><strong>Session:</strong> {{ session.session_id }} | <strong>Dataset:</strong> {{ session.dataset }} | <strong>Task:</strong> {{ session.task }}</p>
-      <p class="muted">{{ product_promise }}</p>
-    </div>
-
-    <div class="card">
-      <h2>Session Summary</h2>
-      <table>
-        <tr><th>Source path</th><td>{{ session.source_path }}</td></tr>
-        <tr><th>Schema version</th><td>{{ session.schema_version }}</td></tr>
-        <tr><th>Trustscore version</th><td>{{ session.trustscore_version }}</td></tr>
-        <tr><th>Nominal Hz</th><td>{{ "%.2f"|format(session.nominal_hz or 0) }}</td></tr>
-        <tr><th>Subject ID</th><td>{{ session.subject_id or "-" }}</td></tr>
-        <tr><th>Reference type</th><td>{{ session.reference_type or "-" }}</td></tr>
-        <tr><th>Body location</th><td>{{ session.body_location or "-" }}</td></tr>
-        <tr><th>Device pose</th><td>{{ session.device_pose or "-" }}</td></tr>
-        <tr><th>Notes</th><td>{{ session.notes | join("; ") if session.notes else "-" }}</td></tr>
-      </table>
-    </div>
-
-    <div class="grid">
-      <div class="card">{{ accel_div | safe }}</div>
-      {% if gps_div %}
-      <div class="card">{{ gps_div | safe }}</div>
-      {% endif %}
-    </div>
+    <section class="hero" id="report-poster">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="hero-kicker">IMU QA report</div>
+          <h1>imuops report</h1>
+          <p><strong>Session:</strong> {{ session.session_id }} | <strong>Dataset:</strong> {{ session.dataset }} | <strong>Task:</strong> {{ session.task }}</p>
+          <p class="muted">{{ product_promise }}</p>
+        </div>
+        {% if decision_snapshot %}
+        <div class="panel panel-strong">
+          <div class="metric-label">Trust score</div>
+          <div class="metric-value">{{ "%.1f"|format(decision_snapshot.trust_percent) }}<small>/100</small></div>
+          <div class="status-pill {{ decision_snapshot.status_class }}">{{ decision_snapshot.status_label }}</div>
+          <p class="metric-note">Duration {{ "%.1f"|format(decision_snapshot.duration_s) }}s | {{ "%.1f"|format(decision_snapshot.nominal_hz) }} Hz | {{ decision_snapshot.window_count }} windows</p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
 
     {% if audit_summary %}
-    <div class="card">
-      <h2>Reliability Summary</h2>
-      <p>
-        <span class="pill">trust_score={{ "%.3f"|format(audit_summary.trust_score) }}</span>
-        <span class="pill">status={{ audit_summary.status }}</span>
-        <span class="pill">warning&lt;={{ "%.2f"|format(audit_summary.warning_threshold) }}</span>
-        <span class="pill">fail&lt;={{ "%.2f"|format(audit_summary.fail_threshold) }}</span>
-      </p>
-      <table>
-        <tr><th>Reason codes</th><td>{{ audit_summary.reason_codes | join(", ") if audit_summary.reason_codes else "-" }}</td></tr>
-        <tr><th>Skipped checks</th><td>{{ audit_summary.skipped_checks | join(", ") if audit_summary.skipped_checks else "-" }}</td></tr>
-        <tr><th>Available sensors</th><td><pre>{{ audit_summary.available_sensors }}</pre></td></tr>
-        <tr><th>Window formula</th><td><code>{{ audit_summary.window_formula or "-" }}</code></td></tr>
-        <tr><th>Session formula</th><td><code>{{ audit_summary.session_formula or "-" }}</code></td></tr>
-        <tr><th>Penalty totals</th><td><pre>{{ audit_summary.penalty_totals }}</pre></td></tr>
-        <tr><th>Weight profile</th><td><pre>{{ audit_summary.weight_profile }}</pre></td></tr>
-        <tr><th>Thresholds</th><td><pre>{{ audit_summary.thresholds }}</pre></td></tr>
-      </table>
-    </div>
-    <div class="card">
-      {{ trust_div | safe }}
-    </div>
-    <div class="card">
-      <h2>Issue Gallery</h2>
-      {% if issue_rows %}
-      <table>
-        <tr><th>Code</th><th>Severity</th><th>Window</th><th>Metrics</th></tr>
-        {% for issue in issue_rows %}
-        <tr>
-          <td>{{ issue.code }}</td>
-          <td>{{ issue.severity }}</td>
-          <td>{{ issue.start_ms }} - {{ issue.end_ms }}</td>
-          <td><pre>{{ issue.metrics }}</pre></td>
-        </tr>
-        {% endfor %}
-      </table>
-      {% else %}
-      <p class="muted">No issues detected.</p>
-      {% endif %}
-    </div>
+    <section class="summary-grid section">
+      <div class="panel summary-card">
+        <div class="metric-label">Decision snapshot</div>
+        <div class="metric-value">{{ "%.3f"|format(audit_summary.trust_score) }}</div>
+        <div class="status-pill status-{{ audit_summary.status }}">{{ audit_summary.status.upper() }}</div>
+        <p class="metric-note">Warning below {{ "%.2f"|format(audit_summary.warning_threshold) }} | Fail below {{ "%.2f"|format(audit_summary.fail_threshold) }}</p>
+      </div>
+      <div class="panel summary-card">
+        <div class="metric-label">Timing and coverage</div>
+        <div class="metric-subvalue">{{ "%.2f"|format(audit_summary.jitter_ms) }} ms jitter</div>
+        <p class="metric-note">Missing gaps: {{ audit_summary.missing_gap_count }} | Dropout ratio: {{ "%.3f"|format(audit_summary.dropout_ratio) }}</p>
+      </div>
+      <div class="panel summary-card">
+        <div class="metric-label">Signal health</div>
+        <div class="metric-subvalue">{{ "%.3f"|format(audit_summary.clipping_ratio) }} clipping</div>
+        <p class="metric-note">Gyro drift: {{ "%.3f"|format(audit_summary.gyro_bias_drift_rads) }} | Static window ratio: {{ "%.3f"|format(audit_summary.static_window_ratio) }}</p>
+      </div>
+      <div class="panel summary-card">
+        <div class="metric-label">Sensors available</div>
+        <div class="sensor-row">
+          {% if available_sensor_list %}
+          {% for sensor in available_sensor_list %}
+          <span class="sensor-pill">{{ sensor }}</span>
+          {% endfor %}
+          {% else %}
+          <span class="muted">No optional sensors detected.</span>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="decision-grid capture-poster" id="report-decision">
+      <div class="panel">
+        <div class="section-label">Top issues to review</div>
+        <ul class="reason-list">
+          {% for reason in top_reason_rows %}
+          <li>
+            <div class="reason-title">{{ reason.label }}</div>
+            <p>{{ reason.message }}</p>
+            <p class="muted">{{ reason.action }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="decision-stack">
+        <div class="panel">
+          <div class="section-label">Recommended next step</div>
+          <p>{{ decision_next_step }}</p>
+        </div>
+        <div class="panel">
+          <div class="section-label">At a glance</div>
+          <div class="info-grid">
+            <div class="info-chip">
+              <div class="metric-label">Reason codes</div>
+              <strong>{{ audit_summary.reason_codes | join(", ") if audit_summary.reason_codes else "None" }}</strong>
+            </div>
+            <div class="info-chip">
+              <div class="metric-label">Skipped checks</div>
+              <strong>{{ audit_summary.skipped_checks | join(", ") if audit_summary.skipped_checks else "None" }}</strong>
+            </div>
+            <div class="info-chip">
+              <div class="metric-label">GPS alignment</div>
+              <strong>{{ "%.3f"|format(audit_summary.gps_alignment_ratio) if audit_summary.gps_alignment_ratio is not none else "n/a" }}</strong>
+            </div>
+            <div class="info-chip">
+              <div class="metric-label">GPS valid ratio</div>
+              <strong>{{ "%.3f"|format(audit_summary.gps_valid_ratio) if audit_summary.gps_valid_ratio is not none else "n/a" }}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
     {% endif %}
 
-  {% if benchmark_summary %}
-  <div class="card">
-    <h2>Benchmark Summary</h2>
-    <p><strong>Task:</strong> {{ benchmark_summary.task }} | <strong>Primary metric:</strong> {{ benchmark_summary.primary_metric_name or "-" }} = {{ benchmark_summary.primary_metric_value }}</p>
-    {% if benchmark_div %}
-    {{ benchmark_div | safe }}
+    <section class="chart-grid section" id="report-trust">
+      <div class="panel">{{ accel_div | safe }}</div>
+      {% if trust_div %}
+      <div class="panel">{{ trust_div | safe }}</div>
+      {% endif %}
+      {% if gps_div %}
+      <div class="panel">{{ gps_div | safe }}</div>
+      {% endif %}
+      {% if benchmark_div %}
+      <div class="panel">{{ benchmark_div | safe }}</div>
+      {% endif %}
+    </section>
+
+    {% if benchmark_summary %}
+    <section class="panel section">
+      <div class="section-label">Benchmark summary</div>
+      <p><strong>Task:</strong> {{ benchmark_summary.task }} | <strong>Primary metric:</strong> {{ benchmark_summary.primary_metric_name or "-" }} = {{ benchmark_summary.primary_metric_value }}</p>
+      {% if benchmark_table %}
+      <div class="table-shell">
+        <table>
+          <tr><th>Baseline</th><th>Metrics</th><th>Warnings</th></tr>
+          {% for row in benchmark_table %}
+          <tr>
+            <td>{{ row.baseline }}</td>
+            <td><pre>{{ row.metrics }}</pre></td>
+            <td>{{ row.warnings | join("; ") if row.warnings else "None" }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% endif %}
+    </section>
     {% endif %}
-    {% if benchmark_table %}
-    <table>
-      <tr><th>Baseline</th><th>Metrics</th><th>Warnings</th></tr>
-      {% for row in benchmark_table %}
-      <tr>
-        <td>{{ row.baseline }}</td>
-        <td><pre>{{ row.metrics }}</pre></td>
-        <td>{{ row.warnings | join("; ") if row.warnings else "None" }}</td>
-      </tr>
+
+    {% if replay_cards %}
+    <section class="section">
+      <div class="section-label">Replay baselines</div>
+      {% for replay in replay_cards %}
+      <div class="panel section">
+        <h2>{{ replay.baseline }} ({{ replay.task }})</h2>
+        <div class="chart-grid">
+          <div>{{ replay.yaw_div | safe }}</div>
+          {% if replay.path_div %}
+          <div>{{ replay.path_div | safe }}</div>
+          {% endif %}
+        </div>
+        <div class="table-shell">
+          <table>
+            <tr><th>Metrics</th><td><pre>{{ replay.metrics }}</pre></td></tr>
+            <tr><th>Warnings</th><td>{{ replay.warnings | join("; ") if replay.warnings else "None" }}</td></tr>
+          </table>
+        </div>
+      </div>
       {% endfor %}
-    </table>
+    </section>
     {% endif %}
-  </div>
-  {% endif %}
 
-  {% if replay_cards %}
-  <h2>Replay Baselines</h2>
-  {% for replay in replay_cards %}
-  <div class="card">
-    <h3>{{ replay.baseline }} ({{ replay.task }})</h3>
-    <div class="grid">
-      <div>{{ replay.yaw_div | safe }}</div>
-      {% if replay.path_div %}
-      <div>{{ replay.path_div | safe }}</div>
+    {% if audit_summary %}
+    <section class="panel section" id="report-issues">
+      <div class="section-label">Issue gallery</div>
+      {% if issue_rows %}
+      <div class="table-shell issue-table">
+        <table>
+          <tr><th>Code</th><th>Severity</th><th>Window</th><th>Metrics</th></tr>
+          {% for issue in issue_rows %}
+          <tr>
+            <td><code>{{ issue.code }}</code></td>
+            <td>{{ issue.severity }}</td>
+            <td>{{ issue.start_ms }} - {{ issue.end_ms }}</td>
+            <td><pre>{{ issue.metrics }}</pre></td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% else %}
+      <p class="muted">No blocking issues were detected for this session.</p>
       {% endif %}
-    </div>
-    <table>
-      <tr><th>Metrics</th><td><pre>{{ replay.metrics }}</pre></td></tr>
-      <tr><th>Warnings</th><td>{{ replay.warnings | join("; ") if replay.warnings else "None" }}</td></tr>
-    </table>
-  </div>
-  {% endfor %}
-  {% endif %}
+    </section>
 
-  {% if corruption_summary %}
-  <div class="card">
-    <h2>Corruption Comparison</h2>
-    <table>
-      <tr><th>Preset</th><td>{{ corruption_summary.preset }}</td></tr>
-      <tr><th>Description</th><td>{{ corruption_summary.description }}</td></tr>
-      <tr><th>Modifications</th><td><pre>{{ corruption_summary.modifications }}</pre></td></tr>
-      {% if corruption_comparison %}
-      <tr><th>Source session dir</th><td>{{ corruption_comparison.source_session_dir }}</td></tr>
-      <tr><th>Source trust score</th><td>{{ corruption_comparison.source_trust_score }}</td></tr>
-      <tr><th>Source reason codes</th><td>{{ corruption_comparison.source_reason_codes | join(", ") }}</td></tr>
-      {% endif %}
-    </table>
-  </div>
-  {% endif %}
+    <section class="section">
+      <details>
+        <summary>Detailed session metadata and trust-score contract</summary>
+        <div class="details-body">
+          <div class="table-shell">
+            <table>
+              <tr><th>Source path</th><td>{{ session.source_path }}</td></tr>
+              <tr><th>Schema version</th><td>{{ session.schema_version }}</td></tr>
+              <tr><th>Trustscore version</th><td>{{ session.trustscore_version }}</td></tr>
+              <tr><th>Nominal Hz</th><td>{{ "%.2f"|format(session.nominal_hz or 0) }}</td></tr>
+              <tr><th>Subject ID</th><td>{{ session.subject_id or "-" }}</td></tr>
+              <tr><th>Reference type</th><td>{{ session.reference_type or "-" }}</td></tr>
+              <tr><th>Body location</th><td>{{ session.body_location or "-" }}</td></tr>
+              <tr><th>Device pose</th><td>{{ session.device_pose or "-" }}</td></tr>
+              <tr><th>Notes</th><td>{{ session.notes | join("; ") if session.notes else "-" }}</td></tr>
+            </table>
+          </div>
+          <div class="table-shell">
+            <table>
+              <tr><th>Window formula</th><td><code>{{ audit_summary.window_formula or "-" }}</code></td></tr>
+              <tr><th>Session formula</th><td><code>{{ audit_summary.session_formula or "-" }}</code></td></tr>
+              <tr><th>Penalty totals</th><td><pre>{{ audit_summary.penalty_totals }}</pre></td></tr>
+              <tr><th>Weight profile</th><td><pre>{{ audit_summary.weight_profile }}</pre></td></tr>
+              <tr><th>Thresholds</th><td><pre>{{ audit_summary.thresholds }}</pre></td></tr>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+    {% endif %}
+
+    {% if corruption_summary %}
+    <section class="section">
+      <details>
+        <summary>Corruption comparison details</summary>
+        <div class="details-body">
+          <div class="table-shell">
+            <table>
+              <tr><th>Preset</th><td>{{ corruption_summary.preset }}</td></tr>
+              <tr><th>Description</th><td>{{ corruption_summary.description }}</td></tr>
+              <tr><th>Modifications</th><td><pre>{{ corruption_summary.modifications }}</pre></td></tr>
+              {% if corruption_comparison %}
+              <tr><th>Source session dir</th><td>{{ corruption_comparison.source_session_dir }}</td></tr>
+              <tr><th>Source trust score</th><td>{{ corruption_comparison.source_trust_score }}</td></tr>
+              <tr><th>Source reason codes</th><td>{{ corruption_comparison.source_reason_codes | join(", ") }}</td></tr>
+              {% endif %}
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+    {% endif %}
   </main>
 </body>
 </html>

@@ -48,27 +48,27 @@ flowchart LR
 
 ### 1. Diagnose trust before bad data poisons downstream work
 
-[![Audit summary preview](docs/artifacts/audit-summary-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/audit-summary-preview.gif)
+[![Audit summary preview](docs/artifacts/audit-summary-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit-summary-preview.gif)
 
 This shows the first-pass audit summary and the trust-score breakdown that tells you where a session failed.
 
-Teams care because timestamp jitter, clipping, packet loss, or missing signals stop being vague suspicions and become named, reviewable failure reasons. Full artifact: [audit_summary.json](https://github.com/bozliu/imuops/releases/download/v0.4.0/audit_summary.json).
+Teams care because timestamp jitter, clipping, packet loss, or missing signals stop being vague suspicions and become named, reviewable failure reasons. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit-summary-preview.gif). Full artifact: [audit_summary.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit_summary.json).
 
 ### 2. Turn QA into evidence teammates can inspect
 
-[![Interactive report preview](docs/artifacts/report-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/report.html)
+[![Interactive report preview](docs/artifacts/report-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/report-preview.gif)
 
 This shows the interactive HTML report that combines trust-score evidence, timing checks, sensor plots, and benchmark context in one shareable artifact.
 
-Teams care because data quality stops living in one engineer's notebook and becomes something a reviewer, manager, or design partner can inspect directly. Full artifact: [report.html](https://github.com/bozliu/imuops/releases/download/v0.4.0/report.html).
+Teams care because data quality stops living in one engineer's notebook and becomes something a reviewer, manager, or design partner can inspect directly. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/report-preview.gif). Full artifact: [report.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/report.html).
 
 ### 3. Decide whether a data-path change regressed the session
 
-[![Compare regression preview](docs/artifacts/compare-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.html)
+[![Compare regression preview](docs/artifacts/compare-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/compare-preview.gif)
 
 This shows a before-vs-after compare view for regression review, trust-score deltas, and summary recommendations.
 
-Teams care because it makes CI and pull-request review practical: if a data pipeline change made the session worse, the artifact says why. Full artifacts: [sample_tabular_compare.html](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.html) and [sample_tabular_compare.json](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.json). Once a session passes review, teams can export validated windows with `imuops export ... --profile qa_filtered`.
+Teams care because it makes CI and pull-request review practical: if a data pipeline change made the session worse, the artifact says why. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/compare-preview.gif). Full artifacts: [sample_tabular_compare.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.html) and [sample_tabular_compare.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.json). Once a session passes review, teams can export validated windows with `imuops export ... --profile qa_filtered`.
 
 ## Install
 
@@ -118,7 +118,7 @@ imuops batch validate-trustscore output --out output/trustscore_batch
 `imuops` ships a reusable GitHub Action from this repo:
 
 ```yaml
-- uses: bozliu/imuops@v0.4.0
+- uses: bozliu/imuops@v0.4.1
   with:
     data_glob: data/**/*.csv
     tabular_config: examples/sample_tabular_config.yaml

@@ -1,5 +1,11 @@
 # imuops
 
+[![Release: public alpha](https://img.shields.io/badge/release-public_alpha-0a7f5a)](https://github.com/bozliu/imuops/releases/latest)
+[![PyPI version](https://img.shields.io/pypi/v/imuops)](https://pypi.org/project/imuops/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776ab)](https://github.com/bozliu/imuops/blob/main/pyproject.toml)
+[![CI](https://github.com/bozliu/imuops/actions/workflows/ci.yml/badge.svg)](https://github.com/bozliu/imuops/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f6feb)](https://github.com/bozliu/imuops/blob/main/LICENSE)
+
 `imuops` is a tabular-first IMU QA and reliability workflow for robotics, wearables, and embedded sensor teams.
 
 It helps teams answer one operational question before they train, benchmark, compare, or ship: can we trust this IMU session, what is wrong with it, and what should we do next?
@@ -48,7 +54,7 @@ flowchart LR
 
 ![Workflow hero demo](docs/artifacts/workflow-hero.gif)
 
-This 12-second workflow demo follows the public alpha path from trust diagnosis to shareable evidence to regression review. Release asset: [workflow-hero.gif](https://github.com/bozliu/imuops/releases/download/v0.4.1/workflow-hero.gif).
+This embedded GIF is a short preview of the public alpha workflow, from trust diagnosis to shareable evidence to regression review. Full demo asset: [workflow-hero.mp4](https://github.com/bozliu/imuops/releases/download/v0.4.1/workflow-hero.mp4). GIF teaser: [workflow-hero.gif](https://github.com/bozliu/imuops/releases/download/v0.4.1/workflow-hero.gif).
 
 ### 1. Diagnose trust before bad data poisons downstream work
 

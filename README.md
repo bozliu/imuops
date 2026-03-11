@@ -27,15 +27,10 @@ Most adjacent tools stop at device drivers, plotting, notebook cleanup, or downs
 - `compare`, `batch`, and `export` commands built for regression review and CI
 - HTML and JSON outputs that teammates can inspect without rerunning your notebook
 
-## Who It Is For
+## Value
 
-`imuops` is a `to B` workflow direction, not a consumer app.
 
-`Primary buyers:` engineering managers, QA leads, and technical leads responsible for sensor-data reliability.
-
-`Primary users:` robotics engineers, wearable/research engineers, data engineers, and embedded QA practitioners.
-
-`Value:` fewer wasted training runs, faster root-cause diagnosis, cleaner handoff into PyTorch or ROS workflows, and auditable QA evidence in pull requests or release checks.
+Fewer wasted training runs, faster root-cause diagnosis, cleaner handoff into PyTorch or ROS workflows, and auditable QA evidence in pull requests or release checks.
 
 ## Workflow Story
 

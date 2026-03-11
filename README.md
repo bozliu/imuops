@@ -46,35 +46,45 @@ flowchart LR
     F --> H["PyTorch / ROS / analytics pipeline"]
 ```
 
+![Workflow hero demo](docs/artifacts/workflow-hero.gif)
+
+This 12-second workflow demo follows the public alpha path from trust diagnosis to shareable evidence to regression review. Release asset: [workflow-hero.gif](https://github.com/bozliu/imuops/releases/download/v0.4.1/workflow-hero.gif).
+
 ### 1. Diagnose trust before bad data poisons downstream work
 
-[![Audit summary preview](docs/artifacts/audit-summary-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit-summary-preview.gif)
+[![Audit summary preview](docs/artifacts/audit-summary-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit_summary.json)
 
 This shows the first-pass audit summary and the trust-score breakdown that tells you where a session failed.
 
-Teams care because timestamp jitter, clipping, packet loss, or missing signals stop being vague suspicions and become named, reviewable failure reasons. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit-summary-preview.gif). Full artifact: [audit_summary.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit_summary.json).
+Teams care because timestamp jitter, clipping, packet loss, or missing signals stop being vague suspicions and become named, reviewable failure reasons. Full artifact: [audit_summary.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/audit_summary.json).
 
 ### 2. Turn QA into evidence teammates can inspect
 
-[![Interactive report preview](docs/artifacts/report-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/report-preview.gif)
+[![Interactive report preview](docs/artifacts/report-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/report.html)
 
 This shows the interactive HTML report that combines trust-score evidence, timing checks, sensor plots, and benchmark context in one shareable artifact.
 
-Teams care because data quality stops living in one engineer's notebook and becomes something a reviewer, manager, or design partner can inspect directly. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/report-preview.gif). Full artifact: [report.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/report.html).
+Teams care because data quality stops living in one engineer's notebook and becomes something a reviewer, manager, or design partner can inspect directly. Full artifact: [report.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/report.html).
 
 ### 3. Decide whether a data-path change regressed the session
 
-[![Compare regression preview](docs/artifacts/compare-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/compare-preview.gif)
+[![Compare regression preview](docs/artifacts/compare-preview.png)](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.html)
 
 This shows a before-vs-after compare view for regression review, trust-score deltas, and summary recommendations.
 
-Teams care because it makes CI and pull-request review practical: if a data pipeline change made the session worse, the artifact says why. Demo: [GIF walkthrough](https://github.com/bozliu/imuops/releases/download/v0.4.1/compare-preview.gif). Full artifacts: [sample_tabular_compare.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.html) and [sample_tabular_compare.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.json). Once a session passes review, teams can export validated windows with `imuops export ... --profile qa_filtered`.
+Teams care because it makes CI and pull-request review practical: if a data pipeline change made the session worse, the artifact says why. Full artifacts: [sample_tabular_compare.html](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.html) and [sample_tabular_compare.json](https://github.com/bozliu/imuops/releases/download/v0.4.1/sample_tabular_compare.json). Once a session passes review, teams can export validated windows with `imuops export ... --profile qa_filtered`.
 
 ## Install
 
 Requires Python 3.11+.
 
-Current public alpha install path:
+Primary install path:
+
+```bash
+python -m pip install imuops
+```
+
+Contributor or source install:
 
 ```bash
 git clone https://github.com/bozliu/imuops.git

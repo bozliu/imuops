@@ -3,8 +3,9 @@
 ## 0.4.1 - 2026-03-11
 
 - restyled report, compare, and batch HTML so the first screen is higher-contrast, more legible, and decision-focused
-- added a reproducible `scripts/generate_release_visuals.py` pipeline for poster PNGs and short GIF demos
-- replaced inline README GIFs with poster cards linked to demos and full artifacts
+- added a reproducible `scripts/generate_release_visuals.py` pipeline for poster PNGs and a single stitched workflow hero GIF
+- replaced inline README mini-GIF links with one embedded workflow demo plus poster cards linked to full artifacts
+- published `imuops` to PyPI with `python -m pip install imuops` as the primary public install path
 - aligned release notes and docs for a `v0.4.1` patch line while keeping bundled sample language synthetic and legacy logs local-only
 
 ## 0.4.0 - 2026-03-11

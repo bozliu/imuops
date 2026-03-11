@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -28,7 +29,20 @@ from imuops.session import load_session, save_session  # noqa: E402
 from imuops.utils import dump_json  # noqa: E402
 
 VIEWPORT = {"width": 1400, "height": 920}
-FRAME_DURATIONS_MS = [900, 1100, 1200]
+SECONDARY_FRAME_DURATIONS_MS = [1800, 2100, 2400]
+HERO_SCENE_DURATION_SECONDS = 2.2
+HERO_TRANSITION_SECONDS = 0.35
+HERO_FPS = 10
+HERO_ZOOM_FRAMES = int(HERO_SCENE_DURATION_SECONDS * HERO_FPS)
+HERO_OUTPUT_SIZE = "1000x657"
+HERO_CAPTURE_SEQUENCE = [
+    ("report_html", "report-poster"),
+    ("report_html", "report-decision"),
+    ("report_html", "report-trust"),
+    ("report_html", "report-issues"),
+    ("compare_html", "compare-poster"),
+    ("compare_html", "compare-decision"),
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -169,6 +183,7 @@ def capture_preview_assets(artifacts: dict[str, Path], out_dir: Path) -> None:
                     poster_path=poster_path,
                     gif_path=gif_path,
                 )
+            _capture_workflow_hero(browser=browser, artifacts=artifacts, out_dir=out_dir)
         finally:
             browser.close()
 
@@ -210,7 +225,8 @@ def _capture_page_story(
             append_images=rest,
             optimize=True,
             loop=0,
-            duration=FRAME_DURATIONS_MS[: len(frames)] + [FRAME_DURATIONS_MS[-1]] * max(0, len(frames) - len(FRAME_DURATIONS_MS)),
+            duration=SECONDARY_FRAME_DURATIONS_MS[: len(frames)]
+            + [SECONDARY_FRAME_DURATIONS_MS[-1]] * max(0, len(frames) - len(SECONDARY_FRAME_DURATIONS_MS)),
             disposal=2,
         )
     finally:
@@ -231,6 +247,129 @@ def _wait_for_charts(page) -> None:
         page.wait_for_selector(".plotly-graph-div svg, .plotly-graph-div canvas", timeout=10_000)
     except Exception:
         page.wait_for_timeout(1200)
+
+
+def _capture_workflow_hero(*, browser, artifacts: dict[str, Path], out_dir: Path) -> None:
+    ffmpeg_path = shutil.which("ffmpeg")
+    ffprobe_path = shutil.which("ffprobe")
+    if not ffmpeg_path or not ffprobe_path:
+        raise RuntimeError("ffmpeg and ffprobe must be available to build workflow-hero.gif")
+
+    poster_path = out_dir / "workflow-hero.png"
+    gif_path = out_dir / "workflow-hero.gif"
+    temp_dir = Path(tempfile.mkdtemp(prefix="imuops-workflow-hero-"))
+    try:
+        frame_paths = _capture_hero_frames(browser=browser, artifacts=artifacts, temp_dir=temp_dir)
+        shutil.copy(frame_paths[0], poster_path)
+        _build_workflow_hero_gif(
+            ffmpeg_path=ffmpeg_path,
+            ffprobe_path=ffprobe_path,
+            frame_paths=frame_paths,
+            gif_path=gif_path,
+        )
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def _capture_hero_frames(*, browser, artifacts: dict[str, Path], temp_dir: Path) -> list[Path]:
+    frame_paths: list[Path] = []
+    current_key: str | None = None
+    context = None
+    page = None
+    try:
+        for index, (artifact_key, scene_id) in enumerate(HERO_CAPTURE_SEQUENCE):
+            html_path = artifacts[artifact_key]
+            if artifact_key != current_key:
+                if context is not None:
+                    context.close()
+                context = browser.new_context(viewport=VIEWPORT, device_scale_factor=2)
+                page = context.new_page()
+                page.goto(html_path.resolve().as_uri(), wait_until="load")
+                page.add_style_tag(
+                    content="html { scroll-behavior: auto !important; } body { scrollbar-width: none; } ::-webkit-scrollbar { display: none; }"
+                )
+                page.wait_for_timeout(1200)
+                _wait_for_charts(page)
+                current_key = artifact_key
+            if page is None:
+                raise RuntimeError("Browser page was not initialized for hero capture")
+            frame_path = temp_dir / f"hero-{index:02d}.png"
+            _scroll_to_scene(page, scene_id)
+            page.screenshot(path=str(frame_path), full_page=False)
+            frame_paths.append(frame_path)
+    finally:
+        if context is not None:
+            context.close()
+    return frame_paths
+
+
+def _build_workflow_hero_gif(
+    *,
+    ffmpeg_path: str,
+    ffprobe_path: str,
+    frame_paths: list[Path],
+    gif_path: Path,
+) -> None:
+    if not frame_paths:
+        raise RuntimeError("No frames captured for workflow-hero.gif")
+
+    scene_duration = f"{HERO_SCENE_DURATION_SECONDS:.2f}"
+    cmd = [ffmpeg_path, "-y"]
+    for frame_path in frame_paths:
+        cmd.extend(["-loop", "1", "-t", scene_duration, "-i", str(frame_path)])
+
+    filter_parts: list[str] = []
+    for index in range(len(frame_paths)):
+        filter_parts.append(
+            f"[{index}:v]scale=1160:-1:flags=lanczos,"
+            f"zoompan=z='min(zoom+0.0032,1.08)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+            f"d={HERO_ZOOM_FRAMES}:s={HERO_OUTPUT_SIZE}:fps={HERO_FPS},"
+            f"trim=duration={HERO_SCENE_DURATION_SECONDS:.2f},setpts=PTS-STARTPTS,"
+            f"format=rgba,setsar=1[v{index}]"
+        )
+
+    current_label = "v0"
+    current_duration = HERO_SCENE_DURATION_SECONDS
+    for index in range(1, len(frame_paths)):
+        next_label = f"x{index}"
+        offset = current_duration - HERO_TRANSITION_SECONDS
+        filter_parts.append(
+            f"[{current_label}][v{index}]xfade=transition=fade:duration={HERO_TRANSITION_SECONDS:.2f}:offset={offset:.2f}[{next_label}]"
+        )
+        current_label = next_label
+        current_duration = current_duration + HERO_SCENE_DURATION_SECONDS - HERO_TRANSITION_SECONDS
+
+    filter_parts.append(f"[{current_label}]split[gif_a][gif_b]")
+    filter_parts.append("[gif_a]palettegen=stats_mode=diff[palette]")
+    filter_parts.append("[gif_b][palette]paletteuse=dither=sierra2_4a[final]")
+
+    cmd.extend(
+        [
+            "-filter_complex",
+            ";".join(filter_parts),
+            "-map",
+            "[final]",
+            "-loop",
+            "0",
+            str(gif_path),
+        ]
+    )
+    subprocess.run(cmd, check=True)
+
+    duration_cmd = [
+        ffprobe_path,
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(gif_path),
+    ]
+    result = subprocess.run(duration_cmd, check=True, capture_output=True, text=True)
+    duration_seconds = float(result.stdout.strip() or "0")
+    if not 10.0 <= duration_seconds <= 15.0:
+        raise RuntimeError(f"workflow-hero.gif duration {duration_seconds:.2f}s is outside the expected 10-15s window")
 
 
 if __name__ == "__main__":

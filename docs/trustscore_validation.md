@@ -16,7 +16,7 @@ The validation tranche checks whether corruption that should make a session less
 imuops validate-trustscore output/customer_session --out output/customer_session/trustscore_validation.json
 ```
 
-The public alpha also ships a checked-in example artifact generated from the bundled sample flow:
+The public alpha also ships a checked-in example artifact generated from the bundled synthetic demo flow:
 
 - [docs/artifacts/trustscore_validation_summary.json](artifacts/trustscore_validation_summary.json)
 - [docs/artifacts/trustscore_validation_release_summary.json](artifacts/trustscore_validation_release_summary.json)

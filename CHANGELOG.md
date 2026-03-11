@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- refreshed the public README story around B2B IMU QA, workflow visuals, and team value
+- aligned dataset provenance language across docs, release notes, and security guidance
+- standardized the bundled sample wording as synthetic demo data and kept legacy logs local-only
+
 ## 0.4.0 - 2026-03-11
 
 - added versioned compare, batch, export, and trust-score validation artifact schemas
@@ -14,7 +20,7 @@
 
 - hardened the repo as a truthful public alpha instead of a market-ready claim
 - restored a tabular-first README with a clean `venv` install path and offline three-command quickstart
-- bundled sanitized sample data in `examples/sample_tabular_imu.csv` and `examples/sample_tabular_config.yaml`
+- bundled synthetic demo sample data in `examples/sample_tabular_imu.csv` and `examples/sample_tabular_config.yaml`
 - removed hardcoded local Python paths from example scripts
 - improved compare output with metadata diffs and a recommendation summary
 - improved batch reporting with ranked sessions and clearer CI-oriented summaries

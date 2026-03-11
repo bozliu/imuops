@@ -25,6 +25,8 @@ Until a dedicated security contact is configured, include:
 Reports can contain `source_path`, `subject_id`, GPS traces, and other identifying metadata. For shared artifacts, prefer:
 
 - `imuops report ... --redact-source-path --redact-subject-id`
-- sanitized demo data for screenshots and tutorials
+- synthetic demo data for public screenshots and tutorials
+
+Do not publish private raw GPS traces, names, or identifying location metadata in public examples unless you have clear permission to do so.
 
 This alpha does not guarantee compliance for regulated workflows by itself.

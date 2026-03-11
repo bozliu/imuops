@@ -1,6 +1,6 @@
 # Public Alpha Release Checklist
 
-`imuops` v0.4.0 is a truthful public alpha around IMU QA, reliability scoring, CI-friendly artifacts, and large-file-safe tabular workflows. This checklist is for release hardening, not for making deployment-grade claims.
+`imuops` v0.4.0 is a truthful public alpha for tabular-first IMU QA, reliability scoring, CI-friendly artifacts, and large-file-safe workflows for team use. This checklist is for release hardening and public storytelling sync, not for making deployment-grade claims.
 
 ## Already Prepared
 
@@ -14,8 +14,18 @@
 - fetch helpers and dataset manifest
 - HTML reporting templates
 - compare, batch, export, action, and trust-score validation commands
-- bundled offline sample data and config
+- bundled synthetic demo data and config
 - versioned machine-readable summary artifacts for compare, batch, export, and validation
+
+## Public Story Sync
+
+Before promoting a release, make sure the public surfaces tell the same story:
+
+- the top half of `README.md` answers what `imuops` is, why it matters, what is unique, and who it is for
+- the README uses workflow visuals with captions, not an unlabeled screenshot gallery
+- the GitHub repo description, release body, and pinned feedback issue all use the same B2B workflow framing
+- README, `docs/datasets.md`, `SECURITY.md`, and `CHANGELOG.md` all describe the bundled sample as synthetic demo data
+- release assets link to the full HTML or JSON artifacts so a first-time visitor can inspect them directly
 
 ## Clean-Machine Validation
 
@@ -48,6 +58,9 @@ Minimum checks:
    - `imuops batch validate-trustscore output --out output/trustscore_batch`
 8. Verify action script smoke path:
    - `python scripts/run_github_action.py --data-glob examples/sample_tabular_imu.csv --tabular-config examples/sample_tabular_config.yaml --report-dir output/action_review`
+9. Verify data hygiene:
+   - bundled sample contains no private GPS traces, names, source paths, or location metadata
+   - public docs do not describe the bundled sample as raw real-world data
 
 ## Maintainer Validation (`dl`)
 
@@ -63,19 +76,24 @@ In this workspace, run release validation from the `dl` conda environment:
 1. Initialize the repo with git and connect the final GitHub remote.
 2. Create the GitHub repo, enable Discussions, and prepare a pinned public-feedback issue.
 3. Confirm all docs use repo-relative links and no local filesystem paths.
-4. Publish the package if credentials are ready:
+4. Sync the public story:
+   - repo description
+   - README visuals and captions
+   - release body
+   - pinned feedback issue copy
+5. Publish the package if credentials are ready:
    - `python -m build`
    - `twine upload dist/*`
-5. Tag and release:
+6. Tag and release:
    - tag `v0.4.0`
-   - attach HTML/JSON validation artifacts and release screenshots or GIFs
-6. Generate release assets:
+   - attach HTML/JSON validation artifacts and workflow GIFs
+7. Generate release assets:
    - sample audit summary
    - sample HTML report
    - sample compare report
    - machine-readable trust-score validation artifact
    - three GIFs for sample audit, report, and compare flows
-7. Keep wording conservative:
+8. Keep wording conservative:
    - `alpha` / `preview`
    - benchmark adapters are fixture/demo validated
    - no deployment-grade or market-readiness claims

@@ -1,46 +1,90 @@
 # imuops
 
-`imuops` is a public alpha for **IMU data QA, reliability scoring, and reproducibility**.
+`imuops` is a tabular-first IMU QA and reliability workflow for robotics, wearables, and embedded sensor teams.
 
-It is built around one core question:
+It helps teams answer one operational question before they train, benchmark, compare, or ship: can we trust this IMU session, what is wrong with it, and what should we do next?
 
-> Is this IMU data trustworthy, why is it failing, and how does that affect baseline algorithms?
+## What It Is
 
-The product is intentionally **tabular-first**. The main path is customer-shaped `csv`, `tsv`, or `parquet` data plus a small YAML mapping file. Benchmark adapters stay in the repo for reproducibility demos, but they are secondary to the tabular workflow.
+`imuops` ingests messy `csv`, `tsv`, or `parquet` IMU files, normalizes them into a canonical session, audits sensor quality, computes an explicit `trust_score`, and emits shareable HTML plus machine-readable JSON artifacts.
 
-## Status
+## Why It Matters
 
-- alpha / preview release
-- current release line: `v0.4.0`
-- main product path: `tabular`
-- benchmark/demo adapters: `ronin`, `oxiod`, `wisdm`
-- local-only contrib adapter: `legacy_arduino`
+Many downstream model or navigation failures are actually data failures: timestamp jitter, packet loss, clipping, unit mismatch, magnetic disturbance, or inconsistent session quality. `imuops` turns those hidden problems into named reasons before a team burns time debugging the wrong layer.
 
-Benchmark adapters are validated on fixtures and demo flows. They are not guaranteed across every upstream packaging or layout variant.
+## What Makes `imuops` Different
+
+Most adjacent tools stop at device drivers, plotting, notebook cleanup, or downstream training. `imuops` adds the workflow layer between raw logs and algorithms:
+
+- tabular-first ingest for customer-shaped data, not just one benchmark layout
+- reason-coded `trust_score` artifacts that explain why a session degraded
+- `compare`, `batch`, and `export` commands built for regression review and CI
+- HTML and JSON outputs that teammates can inspect without rerunning your notebook
+
+## Who It Is For
+
+`imuops` is a `to B` workflow direction, not a consumer app.
+
+`Primary buyers:` engineering managers, QA leads, and technical leads responsible for sensor-data reliability.
+
+`Primary users:` robotics engineers, wearable/research engineers, data engineers, and embedded QA practitioners.
+
+`Value:` fewer wasted training runs, faster root-cause diagnosis, cleaner handoff into PyTorch or ROS workflows, and auditable QA evidence in pull requests or release checks.
+
+## Workflow Story
+
+`imuops` is strongest when it sits in the middle of a team workflow:
+
+```mermaid
+flowchart LR
+    A["Messy IMU CSV / TSV / Parquet"] --> B["imuops ingest tabular"]
+    B --> C["audit + trust_score"]
+    C --> D["interactive report"]
+    C --> E["compare / batch review"]
+    C --> F["qa_filtered export"]
+    E --> G["CI or PR decision"]
+    F --> H["PyTorch / ROS / analytics pipeline"]
+```
+
+### 1. Diagnose trust before bad data poisons downstream work
+
+[![Audit summary preview](docs/artifacts/audit-summary-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/audit-summary-preview.gif)
+
+This shows the first-pass audit summary and the trust-score breakdown that tells you where a session failed.
+
+Teams care because timestamp jitter, clipping, packet loss, or missing signals stop being vague suspicions and become named, reviewable failure reasons. Full artifact: [audit_summary.json](https://github.com/bozliu/imuops/releases/download/v0.4.0/audit_summary.json).
+
+### 2. Turn QA into evidence teammates can inspect
+
+[![Interactive report preview](docs/artifacts/report-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/report.html)
+
+This shows the interactive HTML report that combines trust-score evidence, timing checks, sensor plots, and benchmark context in one shareable artifact.
+
+Teams care because data quality stops living in one engineer's notebook and becomes something a reviewer, manager, or design partner can inspect directly. Full artifact: [report.html](https://github.com/bozliu/imuops/releases/download/v0.4.0/report.html).
+
+### 3. Decide whether a data-path change regressed the session
+
+[![Compare regression preview](docs/artifacts/compare-preview.gif)](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.html)
+
+This shows a before-vs-after compare view for regression review, trust-score deltas, and summary recommendations.
+
+Teams care because it makes CI and pull-request review practical: if a data pipeline change made the session worse, the artifact says why. Full artifacts: [sample_tabular_compare.html](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.html) and [sample_tabular_compare.json](https://github.com/bozliu/imuops/releases/download/v0.4.0/sample_tabular_compare.json). Once a session passes review, teams can export validated windows with `imuops export ... --profile qa_filtered`.
 
 ## Install
 
 Requires Python 3.11+.
 
-Primary public path:
+Current public alpha install path:
 
 ```bash
+git clone https://github.com/bozliu/imuops.git
+cd imuops
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install .
 ```
 
-Use any Python 3.11+ interpreter available on your machine.
-
-Optional `uv` path:
-
-```bash
-uv venv
-source .venv/bin/activate
-uv pip install .
-```
-
-Maintainer-side validation in this workspace uses the `dl` conda environment, but public users should still prefer a clean `venv` install path.
+Use any Python 3.11+ interpreter available on your machine. Maintainer-side validation in this workspace uses the `dl` conda environment, but public users should prefer a clean `venv`.
 
 ## Quickstart
 
@@ -58,17 +102,6 @@ You can also use the bundled demo wrapper:
 bash examples/run_tabular_demo.sh
 ```
 
-## What It Does
-
-- normalizes messy IMU tables into one canonical session format
-- audits timing, clipping, dropout, magnetic disturbance, bias drift, and related issues
-- computes a versioned `trust_score` with explicit penalties, weights, and thresholds
-- replays conservative baseline algorithms for orientation and PDR reproducibility
-- benchmarks task-aware baselines where labels or trajectories exist
-- compares clean vs corrupted or before vs after sessions
-- batches QA over many sessions and writes machine-readable summaries for CI use
-- streams tabular ingest and export through canonical Parquet so large sessions do not need to fit in RAM end to end
-
 ## Core Commands
 
 ```bash
@@ -82,10 +115,10 @@ imuops batch validate-trustscore output --out output/trustscore_batch
 
 ## GitHub Action
 
-`imuops` now ships a reusable GitHub Action from this repo:
+`imuops` ships a reusable GitHub Action from this repo:
 
 ```yaml
-- uses: OWNER/imuops@v0.4.0
+- uses: bozliu/imuops@v0.4.0
   with:
     data_glob: data/**/*.csv
     tabular_config: examples/sample_tabular_config.yaml
@@ -102,47 +135,29 @@ The action emits:
 - `compare_json`
 - `comment_markdown`
 
-See [.github/workflows/pr_tabular_review.yml](.github/workflows/pr_tabular_review.yml) for a sample PR workflow.
+See [.github/workflows/pr_tabular_review.yml](.github/workflows/pr_tabular_review.yml) for the sample PR workflow.
 
-## Included Adapters
+## Data Provenance
 
-### Market-facing default
+`imuops` is developed and demonstrated using three data-source categories:
 
-- `tabular`: customer-shaped `csv`, `tsv`, and `parquet` sources with YAML mapping and unit conversion
+- bundled public sample data in [examples/sample_tabular_imu.csv](examples/sample_tabular_imu.csv), which is a synthetic demo dataset created for the public ingest, audit, and report workflow
+- public benchmark datasets such as RoNIN, OxIOD, and WISDM, which are supported by adapters but are not redistributed in this repo
+- non-distributed historical legacy logs used only as local regression fixtures for parser and adapter work
 
-### Benchmark/demo adapters
-
-- `ronin`: clean inertial odometry benchmark sessions
-- `oxiod`: clean handheld / phone inertial odometry benchmark sessions
-- `wisdm`: lightweight HAR benchmark sessions
-
-### Contrib/local regression
-
-- `legacy_arduino`: historical Arduino/MPU9255 adapter kept only for local regression and examples
-
-## Trust Score
-
-`imuops` publishes the trust-score contract directly into artifacts and reports:
-
-- per-window formula
-- session aggregation formula
-- penalty totals
-- weight profile
-- thresholds
-
-That is documented in [docs/trustscore.md](docs/trustscore.md), and the current validation tranche is in [docs/trustscore_validation.md](docs/trustscore_validation.md).
+No private raw historical dataset is required to use the public alpha. Reports that are shared outside your team should typically use `--redact-source-path --redact-subject-id`. See [docs/datasets.md](docs/datasets.md) for the full provenance and redistribution notes.
 
 ## What This Release Is
 
-- a tabular-first IMU QA tool that new users can install and run without hand-holding
-- a machine-readable trust-score and compare/batch workflow for CI use
-- an alpha release with release-level validation artifacts and explicit known limitations
+- a tabular-first IMU QA workflow that outside users can install and run without hand-holding
+- a trust-score, compare, batch, and export workflow built for team review and CI use
+- a truthful public alpha with release-level validation artifacts and explicit known limitations
 
 ## What This Release Is Not
 
 - a claim of deployment-grade calibration across every device or dataset
 - unbounded replay or benchmark support for arbitrarily large sessions
-- a promise that every benchmark adapter variant in the wild is supported
+- a hosted service or finished enterprise platform
 
 ## Docs
 
@@ -153,12 +168,6 @@ That is documented in [docs/trustscore.md](docs/trustscore.md), and the current 
 - [Schema Compatibility](docs/schema_compatibility.md)
 - [Release Checklist](docs/release.md)
 - [Contributing](CONTRIBUTING.md)
-
-## Public Alpha Notes
-
-- This repo is a **truthful alpha**, not a commercial deployment claim.
-- Reports support `--redact-source-path` and `--redact-subject-id` for safer sharing.
-- Output quality is strongest for tabular customer data and fixture/demo benchmark layouts.
 
 ## License
 

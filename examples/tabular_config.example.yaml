@@ -1,0 +1,34 @@
+format: csv
+
+imu:
+  timestamp_col: time_ms
+  timestamp_unit: ms
+  accel_cols: [ax_g, ay_g, az_g]
+  accel_unit: g
+  gyro_cols: [gx_dps, gy_dps, gz_dps]
+  gyro_unit: deg/s
+  mag_cols: [mx_ut, my_ut, mz_ut]
+  mag_unit: uT
+  temp_col: temp_c
+  temp_unit: c
+  pressure_col: pressure_kpa
+  pressure_unit: kpa
+  label_col: activity
+
+ground_truth:
+  timestamp_col: time_ms
+  timestamp_unit: ms
+  position_cols: [x_m, y_m]
+  position_unit: m
+  heading_col: heading_deg
+  heading_unit: deg
+
+metadata:
+  dataset: customer_demo
+  session_id: customer_demo_session
+  task: pdr
+  reference_type: trajectory
+  body_location: handheld
+  device_pose: free_carry
+  label_namespace: custom_activity
+  subject_id: subject_01

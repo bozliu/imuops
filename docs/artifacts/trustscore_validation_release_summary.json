@@ -1,0 +1,29 @@
+{
+  "artifact_schema_version": "0.4",
+  "artifact_type": "batch_trustscore_validation",
+  "non_improving_count": 2,
+  "rows": [
+    {
+      "all_non_improving": false,
+      "session_dir": "legacy_test1",
+      "session_id": "TEST1",
+      "task": "pdr",
+      "validation_path": "TEST1_trustscore_validation.json"
+    },
+    {
+      "all_non_improving": true,
+      "session_dir": "sample_tabular_demo",
+      "session_id": "sample_tabular_session",
+      "task": "pdr",
+      "validation_path": "sample_tabular_session_trustscore_validation.json"
+    },
+    {
+      "all_non_improving": true,
+      "session_dir": "wisdm_demo",
+      "session_id": "user_1",
+      "task": "har",
+      "validation_path": "user_1_trustscore_validation.json"
+    }
+  ],
+  "session_count": 3
+}

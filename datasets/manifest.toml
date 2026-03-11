@@ -1,0 +1,44 @@
+[tabular]
+adapter = "tabular"
+task = "orientation_or_pdr_or_har"
+reference_type = "optional_labels_or_ground_truth"
+description = "Primary config-driven adapter for customer-shaped CSV, TSV, and Parquet IMU data."
+fetch_mode = "user_supplied"
+body_location = "configurable"
+device_pose = "configurable"
+
+[legacy_arduino]
+adapter = "legacy_arduino"
+task = "pdr"
+reference_type = "gps_optional"
+description = "Experimental contrib adapter for historical Arduino and MPU9255 logs from the local workspace."
+fetch_mode = "local_only"
+body_location = "unknown"
+device_pose = "arbitrary"
+
+[ronin]
+adapter = "ronin"
+task = "pdr"
+reference_type = "trajectory"
+description = "RoNIN-style inertial odometry session directory."
+fetch_script = "scripts/fetch_ronin_sample.py"
+body_location = "body_unknown"
+device_pose = "arbitrary"
+
+[oxiod]
+adapter = "oxiod"
+task = "pdr"
+reference_type = "trajectory"
+description = "OxIOD IMU and visual-inertial ground-truth pair."
+fetch_script = "scripts/fetch_oxiod_sample.py"
+body_location = "handheld"
+device_pose = "arbitrary"
+
+[wisdm]
+adapter = "wisdm"
+task = "har"
+reference_type = "activity_labels"
+description = "WISDM-style accelerometer activity recognition trace."
+fetch_script = "scripts/fetch_wisdm_sample.py"
+body_location = "phone"
+device_pose = "free_carry"

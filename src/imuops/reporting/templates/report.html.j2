@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ title }}</title>
+  <style>
+    :root {
+      --bg: #f5f7f1;
+      --panel: #ffffff;
+      --ink: #112120;
+      --muted: #52615f;
+      --line: #d6ddd8;
+      --accent: #0f766e;
+      --accent-soft: #d1fae5;
+      --warn: #b45309;
+      --fail: #b91c1c;
+    }
+    body { font-family: "Avenir Next", "Segoe UI", sans-serif; margin: 0; color: var(--ink); background:
+      radial-gradient(circle at top left, #dbeafe 0, transparent 30%),
+      radial-gradient(circle at bottom right, #dcfce7 0, transparent 24%),
+      var(--bg); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    h1, h2, h3 { color: #0b1f1d; }
+    p { line-height: 1.6; }
+    table { border-collapse: collapse; width: 100%; background: white; }
+    th, td { border-bottom: 1px solid var(--line); padding: 0.65rem 0.55rem; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 1rem 1.1rem; margin-bottom: 1rem; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.05); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1rem; }
+    .hero { background: linear-gradient(135deg, #0f172a, #0f766e); color: white; border-radius: 24px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
+    .hero p { color: #d1fae5; }
+    code { background: #ecfeff; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    .muted { color: var(--muted); }
+    .pill { display: inline-block; border-radius: 999px; padding: 0.2rem 0.65rem; background: rgba(255,255,255,0.14); margin-right: 0.4rem; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    pre { white-space: pre-wrap; background: #f8fafc; border-radius: 12px; padding: 0.8rem; }
+  </style>
+  <script type="text/javascript">{{ plotly_js | safe }}</script>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <h1>imuops report</h1>
+      <p><strong>Session:</strong> {{ session.session_id }} | <strong>Dataset:</strong> {{ session.dataset }} | <strong>Task:</strong> {{ session.task }}</p>
+      <p class="muted">{{ product_promise }}</p>
+    </div>
+
+    <div class="card">
+      <h2>Session Summary</h2>
+      <table>
+        <tr><th>Source path</th><td>{{ session.source_path }}</td></tr>
+        <tr><th>Schema version</th><td>{{ session.schema_version }}</td></tr>
+        <tr><th>Trustscore version</th><td>{{ session.trustscore_version }}</td></tr>
+        <tr><th>Nominal Hz</th><td>{{ "%.2f"|format(session.nominal_hz or 0) }}</td></tr>
+        <tr><th>Subject ID</th><td>{{ session.subject_id or "-" }}</td></tr>
+        <tr><th>Reference type</th><td>{{ session.reference_type or "-" }}</td></tr>
+        <tr><th>Body location</th><td>{{ session.body_location or "-" }}</td></tr>
+        <tr><th>Device pose</th><td>{{ session.device_pose or "-" }}</td></tr>
+        <tr><th>Notes</th><td>{{ session.notes | join("; ") if session.notes else "-" }}</td></tr>
+      </table>
+    </div>
+
+    <div class="grid">
+      <div class="card">{{ accel_div | safe }}</div>
+      {% if gps_div %}
+      <div class="card">{{ gps_div | safe }}</div>
+      {% endif %}
+    </div>
+
+    {% if audit_summary %}
+    <div class="card">
+      <h2>Reliability Summary</h2>
+      <p>
+        <span class="pill">trust_score={{ "%.3f"|format(audit_summary.trust_score) }}</span>
+        <span class="pill">status={{ audit_summary.status }}</span>
+        <span class="pill">warning&lt;={{ "%.2f"|format(audit_summary.warning_threshold) }}</span>
+        <span class="pill">fail&lt;={{ "%.2f"|format(audit_summary.fail_threshold) }}</span>
+      </p>
+      <table>
+        <tr><th>Reason codes</th><td>{{ audit_summary.reason_codes | join(", ") if audit_summary.reason_codes else "-" }}</td></tr>
+        <tr><th>Skipped checks</th><td>{{ audit_summary.skipped_checks | join(", ") if audit_summary.skipped_checks else "-" }}</td></tr>
+        <tr><th>Available sensors</th><td><pre>{{ audit_summary.available_sensors }}</pre></td></tr>
+        <tr><th>Window formula</th><td><code>{{ audit_summary.window_formula or "-" }}</code></td></tr>
+        <tr><th>Session formula</th><td><code>{{ audit_summary.session_formula or "-" }}</code></td></tr>
+        <tr><th>Penalty totals</th><td><pre>{{ audit_summary.penalty_totals }}</pre></td></tr>
+        <tr><th>Weight profile</th><td><pre>{{ audit_summary.weight_profile }}</pre></td></tr>
+        <tr><th>Thresholds</th><td><pre>{{ audit_summary.thresholds }}</pre></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      {{ trust_div | safe }}
+    </div>
+    <div class="card">
+      <h2>Issue Gallery</h2>
+      {% if issue_rows %}
+      <table>
+        <tr><th>Code</th><th>Severity</th><th>Window</th><th>Metrics</th></tr>
+        {% for issue in issue_rows %}
+        <tr>
+          <td>{{ issue.code }}</td>
+          <td>{{ issue.severity }}</td>
+          <td>{{ issue.start_ms }} - {{ issue.end_ms }}</td>
+          <td><pre>{{ issue.metrics }}</pre></td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p class="muted">No issues detected.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  {% if benchmark_summary %}
+  <div class="card">
+    <h2>Benchmark Summary</h2>
+    <p><strong>Task:</strong> {{ benchmark_summary.task }} | <strong>Primary metric:</strong> {{ benchmark_summary.primary_metric_name or "-" }} = {{ benchmark_summary.primary_metric_value }}</p>
+    {% if benchmark_div %}
+    {{ benchmark_div | safe }}
+    {% endif %}
+    {% if benchmark_table %}
+    <table>
+      <tr><th>Baseline</th><th>Metrics</th><th>Warnings</th></tr>
+      {% for row in benchmark_table %}
+      <tr>
+        <td>{{ row.baseline }}</td>
+        <td><pre>{{ row.metrics }}</pre></td>
+        <td>{{ row.warnings | join("; ") if row.warnings else "None" }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if replay_cards %}
+  <h2>Replay Baselines</h2>
+  {% for replay in replay_cards %}
+  <div class="card">
+    <h3>{{ replay.baseline }} ({{ replay.task }})</h3>
+    <div class="grid">
+      <div>{{ replay.yaw_div | safe }}</div>
+      {% if replay.path_div %}
+      <div>{{ replay.path_div | safe }}</div>
+      {% endif %}
+    </div>
+    <table>
+      <tr><th>Metrics</th><td><pre>{{ replay.metrics }}</pre></td></tr>
+      <tr><th>Warnings</th><td>{{ replay.warnings | join("; ") if replay.warnings else "None" }}</td></tr>
+    </table>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if corruption_summary %}
+  <div class="card">
+    <h2>Corruption Comparison</h2>
+    <table>
+      <tr><th>Preset</th><td>{{ corruption_summary.preset }}</td></tr>
+      <tr><th>Description</th><td>{{ corruption_summary.description }}</td></tr>
+      <tr><th>Modifications</th><td><pre>{{ corruption_summary.modifications }}</pre></td></tr>
+      {% if corruption_comparison %}
+      <tr><th>Source session dir</th><td>{{ corruption_comparison.source_session_dir }}</td></tr>
+      <tr><th>Source trust score</th><td>{{ corruption_comparison.source_trust_score }}</td></tr>
+      <tr><th>Source reason codes</th><td>{{ corruption_comparison.source_reason_codes | join(", ") }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+  {% endif %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,121 @@
+{
+  "all_non_improving": true,
+  "artifact_schema_version": "0.4",
+  "artifact_type": "trustscore_validation",
+  "clean": {
+    "status": "pass",
+    "trust_score": 0.984
+  },
+  "known_limitations": [
+    "timestamp_jitter_3ms did not improve trust_score, but the delta was effectively zero.",
+    "axis_flip_x did not improve trust_score, but the delta was effectively zero.",
+    "gyro_bias_small did not improve trust_score, but the delta was effectively zero.",
+    "mag_bias_30ut did not improve trust_score, but the delta was effectively zero."
+  ],
+  "metric_correlation_rows": [
+    {
+      "average_delta": 0.0,
+      "max_delta": 0.0,
+      "metric": "benchmark_rf_features_accuracy",
+      "min_delta": 0.0,
+      "preset_count": 5
+    },
+    {
+      "average_delta": 0.0,
+      "max_delta": 0.0,
+      "metric": "benchmark_rf_features_macro_f1",
+      "min_delta": 0.0,
+      "preset_count": 5
+    },
+    {
+      "average_delta": -0.2,
+      "max_delta": 0.0,
+      "metric": "benchmark_rf_features_test_windows",
+      "min_delta": -1.0,
+      "preset_count": 5
+    },
+    {
+      "average_delta": 0.0,
+      "max_delta": 0.0,
+      "metric": "benchmark_rf_features_train_windows",
+      "min_delta": 0.0,
+      "preset_count": 5
+    },
+    {
+      "average_delta": -0.2,
+      "max_delta": 0.0,
+      "metric": "benchmark_rf_features_window_count",
+      "min_delta": -1.0,
+      "preset_count": 5
+    }
+  ],
+  "presets": [
+    {
+      "baseline_metric_deltas": {
+        "benchmark_rf_features_accuracy": 0.0,
+        "benchmark_rf_features_macro_f1": 0.0,
+        "benchmark_rf_features_test_windows": -1.0,
+        "benchmark_rf_features_train_windows": 0.0,
+        "benchmark_rf_features_window_count": -1.0
+      },
+      "non_improving": true,
+      "preset": "packet_loss_5",
+      "trust_score": 0.42399999999999993,
+      "trust_score_delta": -0.56
+    },
+    {
+      "baseline_metric_deltas": {
+        "benchmark_rf_features_accuracy": 0.0,
+        "benchmark_rf_features_macro_f1": 0.0,
+        "benchmark_rf_features_test_windows": 0.0,
+        "benchmark_rf_features_train_windows": 0.0,
+        "benchmark_rf_features_window_count": 0.0
+      },
+      "non_improving": true,
+      "preset": "timestamp_jitter_3ms",
+      "trust_score": 0.984,
+      "trust_score_delta": 0.0
+    },
+    {
+      "baseline_metric_deltas": {
+        "benchmark_rf_features_accuracy": 0.0,
+        "benchmark_rf_features_macro_f1": 0.0,
+        "benchmark_rf_features_test_windows": 0.0,
+        "benchmark_rf_features_train_windows": 0.0,
+        "benchmark_rf_features_window_count": 0.0
+      },
+      "non_improving": true,
+      "preset": "axis_flip_x",
+      "trust_score": 0.984,
+      "trust_score_delta": 0.0
+    },
+    {
+      "baseline_metric_deltas": {
+        "benchmark_rf_features_accuracy": 0.0,
+        "benchmark_rf_features_macro_f1": 0.0,
+        "benchmark_rf_features_test_windows": 0.0,
+        "benchmark_rf_features_train_windows": 0.0,
+        "benchmark_rf_features_window_count": 0.0
+      },
+      "non_improving": true,
+      "preset": "gyro_bias_small",
+      "trust_score": 0.984,
+      "trust_score_delta": 0.0
+    },
+    {
+      "baseline_metric_deltas": {
+        "benchmark_rf_features_accuracy": 0.0,
+        "benchmark_rf_features_macro_f1": 0.0,
+        "benchmark_rf_features_test_windows": 0.0,
+        "benchmark_rf_features_train_windows": 0.0,
+        "benchmark_rf_features_window_count": 0.0
+      },
+      "non_improving": true,
+      "preset": "mag_bias_30ut",
+      "trust_score": 0.984,
+      "trust_score_delta": 0.0
+    }
+  ],
+  "session_id": "user_1",
+  "task": "har"
+}

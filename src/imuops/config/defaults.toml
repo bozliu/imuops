@@ -1,0 +1,81 @@
+[audit]
+trustscore_version = "v0.3.0"
+window_formula = "window_trust_score = clamp(1 - sum(active_penalties), 0, 1)"
+session_formula = "session_trust_score = clamp(mean(window_trust_score) - sum(session_penalty_totals) / max(window_count, 1), 0, 1)"
+window_ms = 5000
+step_ms = 2500
+jitter_warn_ms = 4.0
+jitter_fail_ms = 8.0
+missing_gap_factor = 1.8
+missing_ratio_warn = 0.01
+dropout_ratio_warn = 0.01
+freeze_zero_ratio_warn = 0.04
+static_acc_std_mps2 = 0.35
+static_gyro_std_rads = 0.08
+gravity_residual_warn_mps2 = 1.5
+bias_drift_warn_rads = 0.15
+mag_disturbance_cv_warn = 0.25
+pressure_floor_change_pa = 18.0
+pressure_unstable_pa = 12.0
+gps_valid_ratio_warn = 0.5
+gps_alignment_ratio_low = 0.2
+gps_alignment_ratio_high = 1.6
+clipping_warn_ratio = 0.005
+static_window_ratio_warn = 0.08
+warning_threshold = 0.8
+fail_threshold = 0.6
+chunk_rows = 50000
+
+[audit.weights]
+timing_bad = 0.14
+dropout = 0.14
+clipping = 0.18
+gyro_bias_drift = 0.12
+mag_disturbed = 0.1
+gps_unreliable = 0.08
+insufficient_static_segment = 0.08
+pressure_unstable = 0.08
+orientation_inconsistent = 0.1
+freeze = 0.08
+
+[replay]
+step_prominence_mps2 = 1.1
+step_min_interval_ms = 280
+default_step_length_m = 0.72
+madgwick_gain = 0.041
+mahony_kp = 0.8
+mahony_ki = 0.05
+
+[benchmark]
+har_window_ms = 2000
+har_step_ms = 1000
+har_min_windows = 8
+har_random_state = 42
+har_n_estimators = 120
+
+[corruption]
+random_seed = 42
+jitter_ms = 3
+packet_loss_rate = 0.05
+gyro_bias_small = [0.03, -0.02, 0.015]
+mag_bias_30ut = [30.0, -15.0, 10.0]
+
+[tabular]
+chunk_rows = 50000
+default_dataset = "tabular"
+default_task = "orientation"
+default_reference_type = ""
+
+[export]
+default_profile = "canonical"
+default_format = "parquet"
+qa_filtered_threshold = 0.8
+
+[limits]
+replay_max_rows = 500000
+benchmark_max_rows = 500000
+
+[report]
+max_points = 1200
+redact_source_path = false
+redact_subject_id = false

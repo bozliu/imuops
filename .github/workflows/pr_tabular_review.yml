@@ -1,0 +1,69 @@
+name: pr-tabular-review
+
+on:
+  pull_request:
+    paths:
+      - "**/*.csv"
+      - "**/*.tsv"
+      - "**/*.parquet"
+      - "action.yml"
+      - "scripts/run_github_action.py"
+
+jobs:
+  imuops-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed tabular files
+        id: changed
+        shell: bash
+        run: |
+          mapfile -t files < <(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" | grep -E '\.(csv|tsv|parquet)$' || true)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "has_files=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "has_files=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "files<<EOF"
+            printf '%s\n' "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run imuops review
+        if: steps.changed.outputs.has_files == 'true'
+        id: imuops
+        uses: ./
+        with:
+          data_glob: ${{ steps.changed.outputs.files }}
+          tabular_config: examples/sample_tabular_config.yaml
+          report_dir: output/pr_review
+          comment_mode: summary
+
+      - name: Upload imuops artifacts
+        if: steps.changed.outputs.has_files == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: imuops-pr-review
+          path: output/pr_review
+
+      - name: Comment on PR
+        if: steps.changed.outputs.has_files == 'true' && steps.imuops.outputs.comment_markdown != ''
+        uses: actions/github-script@v7
+        env:
+          COMMENT_BODY: ${{ steps.imuops.outputs.comment_markdown }}
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: process.env.COMMENT_BODY,
+            });

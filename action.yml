@@ -1,0 +1,76 @@
+name: "imuops tabular review"
+description: "Run imuops on changed tabular IMU data, emit reports, and expose CI-friendly outputs."
+
+inputs:
+  data_glob:
+    description: "Glob, direct file path, or | / newline separated list of CSV, TSV, or Parquet files."
+    required: true
+  tabular_config:
+    description: "Path to the imuops tabular YAML mapping file."
+    required: true
+  fail_below:
+    description: "Optional trust-score threshold for failing the action."
+    required: false
+    default: ""
+  compare_baseline:
+    description: "Optional canonical session directory to compare against the worst reviewed session."
+    required: false
+    default: ""
+  report_dir:
+    description: "Directory where HTML and JSON artifacts should be written."
+    required: false
+    default: "output/action_review"
+  comment_mode:
+    description: "Comment payload verbosity: off, summary, or full."
+    required: false
+    default: "summary"
+
+outputs:
+  trust_score:
+    description: "Worst trust score across reviewed sessions."
+    value: ${{ steps.run.outputs.trust_score }}
+  status:
+    description: "Worst status across reviewed sessions."
+    value: ${{ steps.run.outputs.status }}
+  summary_json:
+    description: "Path to the action summary JSON manifest."
+    value: ${{ steps.run.outputs.summary_json }}
+  report_html:
+    description: "Path to the HTML report for the worst reviewed session."
+    value: ${{ steps.run.outputs.report_html }}
+  compare_json:
+    description: "Path to the compare JSON artifact when compare_baseline is provided."
+    value: ${{ steps.run.outputs.compare_json }}
+  comment_markdown:
+    description: "Markdown summary ready for a PR comment."
+    value: ${{ steps.run.outputs.comment_markdown }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install imuops
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .
+    - name: Run imuops review
+      id: run
+      shell: bash
+      run: |
+        cmd=(
+          python scripts/run_github_action.py
+          --data-glob "${{ inputs.data_glob }}"
+          --tabular-config "${{ inputs.tabular_config }}"
+          --report-dir "${{ inputs.report_dir }}"
+          --comment-mode "${{ inputs.comment_mode }}"
+        )
+        if [ -n "${{ inputs.fail_below }}" ]; then
+          cmd+=(--fail-below "${{ inputs.fail_below }}")
+        fi
+        if [ -n "${{ inputs.compare_baseline }}" ]; then
+          cmd+=(--compare-baseline "${{ inputs.compare_baseline }}")
+        fi
+        "${cmd[@]}"
